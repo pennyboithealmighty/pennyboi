@@ -8,7 +8,7 @@ window.PENNYBOI_CONFIG = {
 
   // Public read-only API (Mouth /public/*). Set to the Cloudflare Tunnel URL
   // once it's up; empty => the home-page live panels show "the oracle is silent".
-  API_BASE: "",
+  API_BASE: "https://api.pennyboi.com",
 
   // Links — each hidden on the site when null.
   PUMPFUN_URL: null,
