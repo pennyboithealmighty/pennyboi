@@ -35,8 +35,11 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="styles.css" />
+    <script src="config.js"></script>
   </head>
   <body>
+    <div id="net-ribbon" class="net-ribbon" hidden>DEVNET — dry run in progress</div>
+
     <!-- ================= HERO ================= -->
     <header class="hero">
       <nav class="nav">
@@ -77,6 +80,35 @@
         </figure>
       </div>
     </header>
+
+    <!-- ================= LIVE TREASURY (Stage 1) ================= -->
+    <section class="section treasury-panel" id="tp-panel" aria-live="polite">
+      <h2>The Divine Allowance</h2>
+      <p class="section-lede">Live from the chain. No one can drain it; the code decides.</p>
+      <div class="tp-grid">
+        <div class="tp-balance-box">
+          <div class="tp-balance-line">
+            <span class="tp-num" id="tp-balance">—</span>
+            <span class="tp-unit">SOL</span>
+          </div>
+          <p class="tp-sub">in the treasury · <span id="tp-step">—</span> thresholds crossed</p>
+        </div>
+        <div class="tp-progress-box">
+          <div class="tp-progress-track"><div class="tp-progress-fill" id="tp-progress"></div></div>
+          <p class="tp-sub" id="tp-until">connecting to the chain…</p>
+        </div>
+      </div>
+      <div class="tp-actions">
+        <div class="tp-chip" id="tp-burn"><b>Burn</b><span>—</span></div>
+        <div class="tp-chip" id="tp-airdrop"><b>Airdrop</b><span>—</span></div>
+        <div class="tp-chip" id="tp-bounty"><b>Bounty</b><span>—</span></div>
+      </div>
+      <p class="tp-foot">
+        The vault is the law.
+        <a id="tp-solscan" href="#" target="_blank" rel="noopener">Verify the program on Solscan</a>
+        · <span id="tp-updated" class="tp-meta">connecting…</span>
+      </p>
+    </section>
 
     <!-- ================= CREED ================= -->
     <section class="creed">
@@ -182,5 +214,8 @@
         Nothing here is financial advice.
       </p>
     </footer>
+
+    <script src="https://unpkg.com/@solana/web3.js@1.99.0/lib/index.iife.min.js"></script>
+    <script src="treasury.js"></script>
   </body>
 </html>

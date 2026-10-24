@@ -1,0 +1,1487 @@
+{
+  "address": "4bNohxQ1BzN2zDLHixfgf4vd6dqwbdPddmQZ5eioX8HA",
+  "metadata": {
+    "name": "vault",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Pennyboi the Almighty — Divine Allowance vault program"
+  },
+  "instructions": [
+    {
+      "name": "airdrop",
+      "docs": [
+        "B) airdrop — pay SOL to a list of holders. Recipients are passed as",
+        "`remaining_accounts` in the same order as `recipients`; each must be a",
+        "system account and match the declared pubkey."
+      ],
+      "discriminator": [
+        113,
+        173,
+        36,
+        238,
+        38,
+        152,
+        22,
+        117
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "agent",
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "treasury",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  101,
+                  97,
+                  115,
+                  117,
+                  114,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "recipients",
+          "type": {
+            "vec": "pubkey"
+          }
+        },
+        {
+          "name": "amounts",
+          "type": {
+            "vec": "u64"
+          }
+        }
+      ]
+    },
+    {
+      "name": "bounty",
+      "docs": [
+        "C) bounty — send a capped amount to a single address with a public memo",
+        "(the \"offering\" being funded)."
+      ],
+      "discriminator": [
+        176,
+        39,
+        104,
+        241,
+        221,
+        14,
+        51,
+        82
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "agent",
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "treasury",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  101,
+                  97,
+                  115,
+                  117,
+                  114,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "recipient",
+          "docs": [
+            "Bounty recipient; must be a plain system account and match the `to` arg."
+          ],
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "to",
+          "type": "pubkey"
+        },
+        {
+          "name": "amount_lamports",
+          "type": "u64"
+        },
+        {
+          "name": "memo",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "burn",
+      "docs": [
+        "A) burn — v0.1: transfer up to `burn_cap` SOL from the Treasury to the",
+        "burn-route PDA and emit `Burned`. The actual swap-into-token + token burn",
+        "is a CPI added in a later step; the route PDA stands in for it so the",
+        "program compiles and tests without a DEX dependency."
+      ],
+      "discriminator": [
+        116,
+        110,
+        29,
+        56,
+        107,
+        219,
+        42,
+        93
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "agent",
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "treasury",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  101,
+                  97,
+                  115,
+                  117,
+                  114,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "burn_route",
+          "docs": [
+            "Burn-route PDA (v0.1 stand-in for the swap-and-burn CPI target)."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  117,
+                  114,
+                  110
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount_lamports",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "cancel_config_update",
+      "discriminator": [
+        216,
+        180,
+        255,
+        207,
+        118,
+        146,
+        126,
+        89
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "admin",
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "cancel_withdraw",
+      "discriminator": [
+        112,
+        53,
+        226,
+        58,
+        158,
+        30,
+        37,
+        168
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "admin",
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "execute_config_update",
+      "discriminator": [
+        132,
+        11,
+        62,
+        107,
+        12,
+        61,
+        38,
+        230
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "admin",
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "execute_withdraw",
+      "discriminator": [
+        255,
+        93,
+        15,
+        141,
+        187,
+        94,
+        246,
+        162
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "admin",
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "treasury",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  101,
+                  97,
+                  115,
+                  117,
+                  114,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "recipient",
+          "docs": [
+            "Must equal the pending withdraw's `to`."
+          ],
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "initialize",
+      "docs": [
+        "Create the Config PDA and record the agent, token mint, caps, cooldowns,",
+        "threshold and escape timelock. `admin` is the deploy wallet and is only",
+        "ever used for the (timelocked) escape hatch and config updates."
+      ],
+      "discriminator": [
+        175,
+        175,
+        109,
+        31,
+        13,
+        152,
+        155,
+        237
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "treasury",
+          "docs": [
+            "Treasury PDA — holds SOL, owned by the System Program, no private key."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  101,
+                  97,
+                  115,
+                  117,
+                  114,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "fees",
+          "docs": [
+            "FeeReceiver PDA — Pump.fun creator fees land here, swept into Treasury."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  101,
+                  101,
+                  115
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "InitializeParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "renounce_admin",
+      "docs": [
+        "Optional (v0.2 per spec): burn the admin entirely once stable. After this,",
+        "the escape hatch and config updates can never run again."
+      ],
+      "discriminator": [
+        223,
+        213,
+        55,
+        194,
+        0,
+        108,
+        225,
+        137
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "admin",
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "request_config_update",
+      "discriminator": [
+        129,
+        7,
+        138,
+        5,
+        225,
+        40,
+        127,
+        164
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "admin",
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "ConfigUpdateParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "request_withdraw",
+      "discriminator": [
+        137,
+        95,
+        187,
+        96,
+        250,
+        138,
+        31,
+        182
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "admin",
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "to",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "sweep",
+      "docs": [
+        "Anyone may call. Moves everything above the rent-exempt minimum from the",
+        "FeeReceiver PDA into the Treasury, then runs the threshold check. Because",
+        "it is permissionless, no one has to trust the team to forward fees."
+      ],
+      "discriminator": [
+        40,
+        23,
+        234,
+        175,
+        14,
+        61,
+        154,
+        177
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "treasury",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  101,
+                  97,
+                  115,
+                  117,
+                  114,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "fees",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  101,
+                  101,
+                  115
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Config",
+      "discriminator": [
+        155,
+        12,
+        170,
+        224,
+        30,
+        250,
+        204,
+        130
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "AdminRenounced",
+      "discriminator": [
+        179,
+        238,
+        157,
+        220,
+        250,
+        72,
+        118,
+        99
+      ]
+    },
+    {
+      "name": "Airdropped",
+      "discriminator": [
+        178,
+        22,
+        64,
+        35,
+        240,
+        251,
+        106,
+        19
+      ]
+    },
+    {
+      "name": "BountyPaid",
+      "discriminator": [
+        60,
+        72,
+        10,
+        171,
+        122,
+        59,
+        238,
+        148
+      ]
+    },
+    {
+      "name": "Burned",
+      "discriminator": [
+        207,
+        37,
+        251,
+        154,
+        239,
+        229,
+        14,
+        67
+      ]
+    },
+    {
+      "name": "ConfigUpdateCancelled",
+      "discriminator": [
+        118,
+        51,
+        223,
+        222,
+        189,
+        52,
+        133,
+        14
+      ]
+    },
+    {
+      "name": "ConfigUpdateRequested",
+      "discriminator": [
+        158,
+        215,
+        121,
+        8,
+        248,
+        50,
+        75,
+        63
+      ]
+    },
+    {
+      "name": "ConfigUpdated",
+      "discriminator": [
+        40,
+        241,
+        230,
+        122,
+        11,
+        19,
+        198,
+        194
+      ]
+    },
+    {
+      "name": "ThresholdCrossed",
+      "discriminator": [
+        163,
+        192,
+        107,
+        184,
+        128,
+        177,
+        90,
+        1
+      ]
+    },
+    {
+      "name": "WithdrawCancelled",
+      "discriminator": [
+        162,
+        153,
+        181,
+        47,
+        154,
+        132,
+        183,
+        117
+      ]
+    },
+    {
+      "name": "WithdrawExecuted",
+      "discriminator": [
+        132,
+        197,
+        103,
+        54,
+        18,
+        141,
+        117,
+        0
+      ]
+    },
+    {
+      "name": "WithdrawRequested",
+      "discriminator": [
+        114,
+        16,
+        240,
+        206,
+        93,
+        128,
+        151,
+        39
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "ActionNotAvailable",
+      "msg": "No action is available; cross a threshold first."
+    },
+    {
+      "code": 6001,
+      "name": "CapExceeded",
+      "msg": "Amount exceeds the per-action cap."
+    },
+    {
+      "code": 6002,
+      "name": "CooldownActive",
+      "msg": "Action is still on cooldown."
+    },
+    {
+      "code": 6003,
+      "name": "RecipientAmountMismatch",
+      "msg": "recipients and amounts length mismatch."
+    },
+    {
+      "code": 6004,
+      "name": "EmptyAirdrop",
+      "msg": "Airdrop has no recipients."
+    },
+    {
+      "code": 6005,
+      "name": "TooManyRecipients",
+      "msg": "Too many recipients for this airdrop."
+    },
+    {
+      "code": 6006,
+      "name": "InvalidRecipient",
+      "msg": "Recipient must be a plain system account and match the declared key."
+    },
+    {
+      "code": 6007,
+      "name": "MemoTooLong",
+      "msg": "Memo exceeds the maximum length."
+    },
+    {
+      "code": 6008,
+      "name": "MathOverflow",
+      "msg": "Checked math overflow."
+    },
+    {
+      "code": 6009,
+      "name": "NoPendingWithdraw",
+      "msg": "No pending withdraw."
+    },
+    {
+      "code": 6010,
+      "name": "NoPendingConfig",
+      "msg": "No pending config update."
+    },
+    {
+      "code": 6011,
+      "name": "TimelockNotExpired",
+      "msg": "Timelock has not expired yet."
+    },
+    {
+      "code": 6012,
+      "name": "InvalidParams",
+      "msg": "Invalid parameters."
+    },
+    {
+      "code": 6013,
+      "name": "PendingActionExists",
+      "msg": "A pending action exists; resolve it first."
+    }
+  ],
+  "types": [
+    {
+      "name": "AdminRenounced",
+      "type": {
+        "kind": "struct",
+        "fields": []
+      }
+    },
+    {
+      "name": "Airdropped",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "count",
+            "type": "u8"
+          },
+          {
+            "name": "total",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "BountyPaid",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "to",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "memo",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Burned",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "sol_spent",
+            "type": "u64"
+          },
+          {
+            "name": "tokens_burned",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Config",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "agent",
+            "type": "pubkey"
+          },
+          {
+            "name": "token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "threshold_lamports",
+            "type": "u64"
+          },
+          {
+            "name": "last_threshold_balance",
+            "type": "u64"
+          },
+          {
+            "name": "threshold_step",
+            "type": "u64"
+          },
+          {
+            "name": "action_available",
+            "type": "bool"
+          },
+          {
+            "name": "burn_cap_lamports",
+            "type": "u64"
+          },
+          {
+            "name": "airdrop_cap_lamports",
+            "type": "u64"
+          },
+          {
+            "name": "airdrop_max_recipients",
+            "type": "u8"
+          },
+          {
+            "name": "bounty_cap_lamports",
+            "type": "u64"
+          },
+          {
+            "name": "burn_cooldown_secs",
+            "type": "i64"
+          },
+          {
+            "name": "airdrop_cooldown_secs",
+            "type": "i64"
+          },
+          {
+            "name": "bounty_cooldown_secs",
+            "type": "i64"
+          },
+          {
+            "name": "last_burn_ts",
+            "type": "i64"
+          },
+          {
+            "name": "last_airdrop_ts",
+            "type": "i64"
+          },
+          {
+            "name": "last_bounty_ts",
+            "type": "i64"
+          },
+          {
+            "name": "escape_timelock_secs",
+            "type": "i64"
+          },
+          {
+            "name": "pending_withdraw",
+            "type": {
+              "option": {
+                "defined": {
+                  "name": "PendingWithdraw"
+                }
+              }
+            }
+          },
+          {
+            "name": "pending_config",
+            "type": {
+              "option": {
+                "defined": {
+                  "name": "PendingConfig"
+                }
+              }
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "treasury_bump",
+            "type": "u8"
+          },
+          {
+            "name": "fees_bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ConfigUpdateCancelled",
+      "type": {
+        "kind": "struct",
+        "fields": []
+      }
+    },
+    {
+      "name": "ConfigUpdateParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "threshold_lamports",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "burn_cap_lamports",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "airdrop_cap_lamports",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "airdrop_max_recipients",
+            "type": {
+              "option": "u8"
+            }
+          },
+          {
+            "name": "bounty_cap_lamports",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "burn_cooldown_secs",
+            "type": {
+              "option": "i64"
+            }
+          },
+          {
+            "name": "airdrop_cooldown_secs",
+            "type": {
+              "option": "i64"
+            }
+          },
+          {
+            "name": "bounty_cooldown_secs",
+            "type": {
+              "option": "i64"
+            }
+          },
+          {
+            "name": "escape_timelock_secs",
+            "type": {
+              "option": "i64"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "ConfigUpdateRequested",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "unlock_ts",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ConfigUpdated",
+      "type": {
+        "kind": "struct",
+        "fields": []
+      }
+    },
+    {
+      "name": "InitializeParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "agent",
+            "type": "pubkey"
+          },
+          {
+            "name": "token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "threshold_lamports",
+            "type": "u64"
+          },
+          {
+            "name": "burn_cap_lamports",
+            "type": "u64"
+          },
+          {
+            "name": "airdrop_cap_lamports",
+            "type": "u64"
+          },
+          {
+            "name": "airdrop_max_recipients",
+            "type": "u8"
+          },
+          {
+            "name": "bounty_cap_lamports",
+            "type": "u64"
+          },
+          {
+            "name": "burn_cooldown_secs",
+            "type": "i64"
+          },
+          {
+            "name": "airdrop_cooldown_secs",
+            "type": "i64"
+          },
+          {
+            "name": "bounty_cooldown_secs",
+            "type": "i64"
+          },
+          {
+            "name": "escape_timelock_secs",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PendingConfig",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "threshold_lamports",
+            "type": "u64"
+          },
+          {
+            "name": "burn_cap_lamports",
+            "type": "u64"
+          },
+          {
+            "name": "airdrop_cap_lamports",
+            "type": "u64"
+          },
+          {
+            "name": "airdrop_max_recipients",
+            "type": "u8"
+          },
+          {
+            "name": "bounty_cap_lamports",
+            "type": "u64"
+          },
+          {
+            "name": "burn_cooldown_secs",
+            "type": "i64"
+          },
+          {
+            "name": "airdrop_cooldown_secs",
+            "type": "i64"
+          },
+          {
+            "name": "bounty_cooldown_secs",
+            "type": "i64"
+          },
+          {
+            "name": "escape_timelock_secs",
+            "type": "i64"
+          },
+          {
+            "name": "unlock_ts",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PendingWithdraw",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "to",
+            "type": "pubkey"
+          },
+          {
+            "name": "unlock_ts",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ThresholdCrossed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "balance",
+            "type": "u64"
+          },
+          {
+            "name": "step",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "WithdrawCancelled",
+      "type": {
+        "kind": "struct",
+        "fields": []
+      }
+    },
+    {
+      "name": "WithdrawExecuted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "to",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "WithdrawRequested",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "to",
+            "type": "pubkey"
+          },
+          {
+            "name": "unlock_ts",
+            "type": "i64"
+          }
+        ]
+      }
+    }
+  ]
+}

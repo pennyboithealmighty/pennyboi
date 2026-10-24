@@ -251,3 +251,77 @@ h2 {
   .steps { grid-template-columns: 1fr; }
   .section { padding: 64px 18px; }
 }
+
+/* ====================== Stage 1: devnet ribbon + live treasury ============ */
+.net-ribbon {
+  background: var(--copper);
+  color: var(--ink);
+  text-align: center;
+  font-weight: 800;
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 6px 12px;
+}
+
+.treasury-panel {
+  background: var(--bg-2);
+  max-width: none;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.treasury-panel > * { max-width: var(--maxw); margin-left: auto; margin-right: auto; }
+
+.tp-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 40px;
+  align-items: center;
+  margin-top: 8px;
+}
+.tp-balance-line { display: flex; align-items: baseline; gap: 10px; }
+.tp-num {
+  font-family: "Anton", sans-serif;
+  font-size: clamp(2.8rem, 8vw, 4.6rem);
+  color: var(--copper);
+  line-height: 0.9;
+}
+.tp-unit { font-family: "Anton", sans-serif; font-size: 1.4rem; color: var(--cream); }
+.tp-sub { color: var(--muted); margin: 10px 0 0; }
+
+.tp-progress-track {
+  height: 14px;
+  background: #141311;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.tp-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--copper-deep), var(--copper-bright));
+  transition: width 0.6s ease;
+}
+
+.tp-actions { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 28px; }
+.tp-chip {
+  flex: 1 1 180px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--copper);
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.tp-chip b { font-family: "Anton", sans-serif; text-transform: uppercase; letter-spacing: 0.04em; }
+.tp-chip span { color: var(--muted); font-size: 0.95rem; }
+
+.tp-foot { margin-top: 28px; color: var(--muted); font-size: 0.92rem; }
+.tp-meta.tp-stale { color: #d98a3d; }
+
+@media (max-width: 860px) {
+  .tp-grid { grid-template-columns: 1fr; gap: 24px; }
+  .tp-actions { flex-direction: column; }
+}
