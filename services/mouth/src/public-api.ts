@@ -156,7 +156,7 @@ export function registerPublicApi(app: Express, deps: PublicApiDeps): void {
     return {
       network: cfg.cluster,
       programId: envStr("VAULT_PROGRAM_ID"),
-      ...(s ?? { balanceSol: null, step: null, untilNextSol: null, available: [] }),
+      ...(s ?? { balanceSol: null, step: null, untilNextSol: null, available: [], actionsBanked: null }),
     };
   }));
 
@@ -192,6 +192,7 @@ export function registerPublicApi(app: Express, deps: PublicApiDeps): void {
       programId: envStr("VAULT_PROGRAM_ID"),
       balanceSol: s?.balanceSol ?? null,
       thresholdStep: s?.step ?? null,
+      actionsBanked: s?.actionsBanked ?? null,
       decrees: db.countActions() + db.countPostedXPosts(),
       grudges: db.countActiveGrudges(),
       loyal: db.countLoyal(),

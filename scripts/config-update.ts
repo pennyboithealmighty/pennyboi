@@ -31,6 +31,8 @@ function updateParams() {
     airdropCooldownSecs: new BN(envNum("VAULT_AIRDROP_COOLDOWN_SECS", 12 * 3600)),
     bountyCooldownSecs: new BN(envNum("VAULT_BOUNTY_COOLDOWN_SECS", 24 * 3600)),
     escapeTimelockSecs: new BN(envNum("VAULT_ESCAPE_TIMELOCK_SECS", 72 * 3600)),
+    maxBankedActions: envNum("VAULT_MAX_BANKED_ACTIONS", 50),
+    idleFloorSecs: new BN(envNum("VAULT_IDLE_FLOOR_SECS", 86400)),
   };
 }
 

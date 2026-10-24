@@ -12,7 +12,8 @@ function fakeConfig(over: Partial<VaultConfig> = {}): VaultConfig {
     thresholdLamports: 2_000_000_000,
     lastThresholdBalance: 2_000_000_000,
     thresholdStep: 3,
-    actionAvailable: true,
+    actionsAvailable: 1,
+    maxBankedActions: 50,
     burnCapLamports: 100_000_000,
     airdropCapLamports: 100_000_000,
     airdropMaxRecipients: 20,
@@ -23,6 +24,8 @@ function fakeConfig(over: Partial<VaultConfig> = {}): VaultConfig {
     lastBurnTs: 0,
     lastAirdropTs: 990, // 990 + 100 = 1090 > now(1000) -> still on cooldown
     lastBountyTs: 0,
+    idleFloorSecs: 86400,
+    lastActionTs: 0,
     escapeTimelockSecs: 3600,
     pendingWithdraw: false,
     pendingConfig: false,

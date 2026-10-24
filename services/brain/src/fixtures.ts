@@ -8,7 +8,7 @@ export const SELLER = "Vote111111111111111111111111111111111111111";
 export function makeBriefing(over: Partial<Briefing> = {}): Briefing {
   return {
     mood: "greedy",
-    treasury: { balance_sol: 2.5, threshold_step: 1 },
+    treasury: { balance_sol: 2.5, threshold_step: 1, actions_banked: 3 },
     available_actions: {
       burn: { cap_lamports: 100_000_000 },
       airdrop: { cap_lamports: 100_000_000, max_recipients: 20 },

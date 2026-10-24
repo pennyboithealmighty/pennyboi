@@ -3,6 +3,8 @@
 // a briefing, hands it to the Brain, and resets the activity window.
 
 import {
+  computeAvailableActions,
+  envNum,
   fetchVaultConfig,
   lamportsToSol,
   type LoadedVault,
@@ -24,11 +26,14 @@ export interface TrackerDeps {
 }
 
 export class ThresholdTracker {
-  private lastBriefedStep = -1;
+  private lastBriefAt = 0; // ms; throttle so a standing backlog doesn't spam
   private checking = false;
   private warnedNoVault = false;
+  private minBriefMs: number;
 
-  constructor(private deps: TrackerDeps) {}
+  constructor(private deps: TrackerDeps) {
+    this.minBriefMs = envNum("EYES_BRIEF_MIN_SECS", 900) * 1000;
+  }
 
   /** Pull the memory-backed sections of the briefing from the shared DB. */
   private memoryOpts(): BuildOpts {
@@ -59,7 +64,7 @@ export class ThresholdTracker {
     };
   }
 
-  /** Re-read chain state and brief if a new threshold is pending a decision. */
+  /** Re-read chain state and brief while he owes banked acts he can spend. */
   async check(): Promise<void> {
     const { vault, connection, activity, onBrief, log } = this.deps;
     if (!vault) {
@@ -73,18 +78,19 @@ export class ThresholdTracker {
     this.checking = true;
     try {
       const cfg = await fetchVaultConfig(vault.program, vault.configPda);
+      const nowSecs = Math.floor(Date.now() / 1000);
 
-      // Brief once per new threshold while the flag is set and unconsumed.
-      if (cfg.actionAvailable && cfg.thresholdStep !== this.lastBriefedStep) {
+      // Brief when he has banked acts AND at least one menu action is off
+      // cooldown (something is actually spendable), throttled so a standing
+      // backlog or a backlog stuck behind cooldowns doesn't re-brief every poll.
+      const offCooldown = Object.keys(computeAvailableActions(cfg, nowSecs)).length > 0;
+      const throttled = Date.now() - this.lastBriefAt < this.minBriefMs;
+      if (cfg.actionsAvailable > 0 && offCooldown && !throttled) {
         const lamports = await connection.getBalance(vault.treasuryPda);
-        const nowSecs = Math.floor(Date.now() / 1000);
         const briefing = buildBriefing(cfg, lamportsToSol(lamports), activity, nowSecs, this.memoryOpts());
         await onBrief(briefing);
         activity.reset();
-        this.lastBriefedStep = cfg.thresholdStep;
-      } else if (!cfg.actionAvailable) {
-        // Flag consumed (action taken) — align so the next crossing re-fires.
-        this.lastBriefedStep = cfg.thresholdStep;
+        this.lastBriefAt = Date.now();
       }
     } catch (e) {
       this.deps.log.error("tracker check failed", e);

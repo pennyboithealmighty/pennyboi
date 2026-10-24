@@ -36,6 +36,7 @@ export function buildBriefing(
     treasury: {
       balance_sol: treasurySol,
       threshold_step: cfg.thresholdStep,
+      actions_banked: cfg.actionsAvailable,
     },
     available_actions: computeAvailableActions(cfg, nowSecs),
     since_last_threshold: {

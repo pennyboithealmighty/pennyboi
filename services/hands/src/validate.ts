@@ -22,8 +22,8 @@ export function validateOnchain(
   if (d.action === "none") return [];
 
   const errs: string[] = [];
-  if (!cfg.actionAvailable) {
-    errs.push("action flag is not set on-chain (no threshold pending)");
+  if (cfg.actionsAvailable <= 0) {
+    errs.push("no banked acts on-chain (nothing to spend)");
   }
   const avail = computeAvailableActions(cfg, nowSecs);
 

@@ -45,6 +45,8 @@ pub mod vault {
             params.airdrop_cooldown_secs,
             params.bounty_cooldown_secs,
             params.escape_timelock_secs,
+            params.max_banked_actions,
+            params.idle_floor_secs,
         )?;
 
         let config = &mut ctx.accounts.config;
@@ -56,7 +58,8 @@ pub mod vault {
         // Count only growth from here on; ignore any pre-existing balance.
         config.last_threshold_balance = ctx.accounts.treasury.lamports();
         config.threshold_step = 0;
-        config.action_available = false;
+        config.actions_available = 0;
+        config.max_banked_actions = params.max_banked_actions;
 
         config.burn_cap_lamports = params.burn_cap_lamports;
         config.airdrop_cap_lamports = params.airdrop_cap_lamports;
@@ -70,6 +73,9 @@ pub mod vault {
         config.last_burn_ts = 0;
         config.last_airdrop_ts = 0;
         config.last_bounty_ts = 0;
+
+        config.idle_floor_secs = params.idle_floor_secs;
+        config.last_action_ts = 0;
 
         config.escape_timelock_secs = params.escape_timelock_secs;
         config.pending_withdraw = None;
@@ -97,7 +103,7 @@ pub mod vault {
         let now = Clock::get()?.unix_timestamp;
         let config = &ctx.accounts.config;
 
-        require!(config.action_available, VaultError::ActionNotAvailable);
+        require!(config.actions_available > 0, VaultError::ActionNotAvailable);
         require!(
             amount_lamports <= config.burn_cap_lamports,
             VaultError::CapExceeded
@@ -121,7 +127,8 @@ pub mod vault {
 
         let config = &mut ctx.accounts.config;
         config.last_burn_ts = now;
-        config.action_available = false;
+        config.actions_available = config.actions_available.saturating_sub(1);
+        config.last_action_ts = now;
 
         emit!(Burned {
             sol_spent: amount_lamports,
@@ -141,7 +148,7 @@ pub mod vault {
         let now = Clock::get()?.unix_timestamp;
         let config = &ctx.accounts.config;
 
-        require!(config.action_available, VaultError::ActionNotAvailable);
+        require!(config.actions_available > 0, VaultError::ActionNotAvailable);
         require!(
             recipients.len() == amounts.len(),
             VaultError::RecipientAmountMismatch
@@ -194,7 +201,8 @@ pub mod vault {
 
         let config = &mut ctx.accounts.config;
         config.last_airdrop_ts = now;
-        config.action_available = false;
+        config.actions_available = config.actions_available.saturating_sub(1);
+        config.last_action_ts = now;
 
         emit!(Airdropped {
             count: recipients.len() as u8,
@@ -214,7 +222,7 @@ pub mod vault {
         let now = Clock::get()?.unix_timestamp;
         let config = &ctx.accounts.config;
 
-        require!(config.action_available, VaultError::ActionNotAvailable);
+        require!(config.actions_available > 0, VaultError::ActionNotAvailable);
         require!(
             amount_lamports <= config.bounty_cap_lamports,
             VaultError::CapExceeded
@@ -243,7 +251,8 @@ pub mod vault {
 
         let config = &mut ctx.accounts.config;
         config.last_bounty_ts = now;
-        config.action_available = false;
+        config.actions_available = config.actions_available.saturating_sub(1);
+        config.last_action_ts = now;
 
         emit!(BountyPaid {
             to,
@@ -261,6 +270,7 @@ pub mod vault {
     /// FeeReceiver PDA into the Treasury, then runs the threshold check. Because
     /// it is permissionless, no one has to trust the team to forward fees.
     pub fn sweep(ctx: Context<Sweep>) -> Result<()> {
+        let now = Clock::get()?.unix_timestamp;
         let rent_min = Rent::get()?.minimum_balance(0);
         let fees_balance = ctx.accounts.fees.lamports();
 
@@ -284,35 +294,54 @@ pub mod vault {
         // Post-CPI the Treasury AccountInfo reflects the new balance.
         let new_balance = ctx.accounts.treasury.lamports();
         let config = &mut ctx.accounts.config;
-
         let threshold = config.threshold_lamports;
-        let prev = config.last_threshold_balance;
-        let target = prev.checked_add(threshold).ok_or(VaultError::MathOverflow)?;
+        let max_banked = config.max_banked_actions;
 
-        if new_balance >= target {
-            // How many whole thresholds crossed in this sweep (>= 1).
-            let delta = new_balance
-                .checked_sub(prev)
-                .ok_or(VaultError::MathOverflow)?;
-            let steps = delta / threshold;
-            let advance = steps
-                .checked_mul(threshold)
-                .ok_or(VaultError::MathOverflow)?;
-            config.last_threshold_balance = prev
-                .checked_add(advance)
-                .ok_or(VaultError::MathOverflow)?;
+        // Bank one act per whole threshold crossed. Walk last_threshold_balance
+        // up one step at a time so the count is exact; bound the loop by
+        // max_banked_actions so a huge balance can't run it unboundedly.
+        let mut crossings: u16 = 0;
+        while new_balance >= config.last_threshold_balance.saturating_add(threshold)
+            && crossings < max_banked
+        {
+            config.last_threshold_balance = config.last_threshold_balance.saturating_add(threshold);
+            crossings = crossings.saturating_add(1);
+        }
+        if crossings > 0 {
+            config.actions_available = config
+                .actions_available
+                .saturating_add(crossings)
+                .min(max_banked);
             config.threshold_step = config
                 .threshold_step
-                .checked_add(steps)
+                .checked_add(crossings as u64)
                 .ok_or(VaultError::MathOverflow)?;
-            // One flag regardless of how many thresholds crossed; it is consumed
-            // by exactly one menu action.
-            config.action_available = true;
-
             emit!(ThresholdCrossed {
                 balance: new_balance,
                 step: config.threshold_step,
+                granted: crossings,
+                banked: config.actions_available,
             });
+        }
+
+        // Idle floor: during quiet, funded spells grant one act so he never goes
+        // fully silent — only if the vault can afford the smallest cap.
+        if config.actions_available == 0 {
+            let min_cap = config
+                .burn_cap_lamports
+                .min(config.airdrop_cap_lamports)
+                .min(config.bounty_cap_lamports);
+            let ready = config
+                .last_action_ts
+                .checked_add(config.idle_floor_secs)
+                .ok_or(VaultError::MathOverflow)?;
+            if new_balance >= min_cap && now >= ready {
+                config.actions_available = 1;
+                emit!(IdleFloorGranted {
+                    balance: new_balance,
+                    since: config.last_action_ts,
+                });
+            }
         }
 
         Ok(())
@@ -433,6 +462,10 @@ pub mod vault {
             escape_timelock_secs: params
                 .escape_timelock_secs
                 .unwrap_or(config.escape_timelock_secs),
+            max_banked_actions: params
+                .max_banked_actions
+                .unwrap_or(config.max_banked_actions),
+            idle_floor_secs: params.idle_floor_secs.unwrap_or(config.idle_floor_secs),
             unlock_ts: now
                 .checked_add(config.escape_timelock_secs)
                 .ok_or(VaultError::MathOverflow)?,
@@ -445,6 +478,8 @@ pub mod vault {
             resolved.airdrop_cooldown_secs,
             resolved.bounty_cooldown_secs,
             resolved.escape_timelock_secs,
+            resolved.max_banked_actions,
+            resolved.idle_floor_secs,
         )?;
 
         let unlock_ts = resolved.unlock_ts;
@@ -472,6 +507,8 @@ pub mod vault {
         config.airdrop_cooldown_secs = pending.airdrop_cooldown_secs;
         config.bounty_cooldown_secs = pending.bounty_cooldown_secs;
         config.escape_timelock_secs = pending.escape_timelock_secs;
+        config.max_banked_actions = pending.max_banked_actions;
+        config.idle_floor_secs = pending.idle_floor_secs;
         config.pending_config = None;
 
         emit!(ConfigUpdated {});
@@ -523,6 +560,8 @@ fn validate_bounds(
     airdrop_cooldown_secs: i64,
     bounty_cooldown_secs: i64,
     escape_timelock_secs: i64,
+    max_banked_actions: u16,
+    idle_floor_secs: i64,
 ) -> Result<()> {
     require!(threshold_lamports > 0, VaultError::InvalidParams);
     require!(
@@ -536,6 +575,8 @@ fn validate_bounds(
             && escape_timelock_secs >= 0,
         VaultError::InvalidParams
     );
+    require!(max_banked_actions > 0, VaultError::InvalidParams);
+    require!(idle_floor_secs >= 0, VaultError::InvalidParams);
     Ok(())
 }
 
@@ -670,7 +711,12 @@ pub struct Config {
     pub threshold_lamports: u64,
     pub last_threshold_balance: u64,
     pub threshold_step: u64,
-    pub action_available: bool,
+
+    // Banked acts owed (replaces the old action_available bool). A sweep banks
+    // one per threshold crossed (and the idle floor can grant one); each menu
+    // call consumes one. Cooldowns still pace how fast they're spent.
+    pub actions_available: u16,
+    pub max_banked_actions: u16,
 
     pub burn_cap_lamports: u64,
     pub airdrop_cap_lamports: u64,
@@ -684,6 +730,11 @@ pub struct Config {
     pub last_burn_ts: i64,
     pub last_airdrop_ts: i64,
     pub last_bounty_ts: i64,
+
+    // Idle floor: if no act in `idle_floor_secs` AND the vault can afford the
+    // smallest cap, sweep() grants one act so he never goes fully silent.
+    pub idle_floor_secs: i64,
+    pub last_action_ts: i64,
 
     pub escape_timelock_secs: i64,
     pub pending_withdraw: Option<PendingWithdraw>,
@@ -712,6 +763,8 @@ pub struct PendingConfig {
     pub airdrop_cooldown_secs: i64,
     pub bounty_cooldown_secs: i64,
     pub escape_timelock_secs: i64,
+    pub max_banked_actions: u16,
+    pub idle_floor_secs: i64,
     pub unlock_ts: i64,
 }
 
@@ -728,6 +781,8 @@ pub struct InitializeParams {
     pub airdrop_cooldown_secs: i64,
     pub bounty_cooldown_secs: i64,
     pub escape_timelock_secs: i64,
+    pub max_banked_actions: u16,
+    pub idle_floor_secs: i64,
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone)]
@@ -741,6 +796,8 @@ pub struct ConfigUpdateParams {
     pub airdrop_cooldown_secs: Option<i64>,
     pub bounty_cooldown_secs: Option<i64>,
     pub escape_timelock_secs: Option<i64>,
+    pub max_banked_actions: Option<u16>,
+    pub idle_floor_secs: Option<i64>,
 }
 
 // =========================================================================
@@ -751,6 +808,14 @@ pub struct ConfigUpdateParams {
 pub struct ThresholdCrossed {
     pub balance: u64,
     pub step: u64,
+    pub granted: u16,
+    pub banked: u16,
+}
+
+#[event]
+pub struct IdleFloorGranted {
+    pub balance: u64,
+    pub since: i64,
 }
 
 #[event]
@@ -808,7 +873,7 @@ pub struct AdminRenounced {}
 
 #[error_code]
 pub enum VaultError {
-    #[msg("No action is available; cross a threshold first.")]
+    #[msg("No banked acts; wait for a threshold crossing or the idle floor.")]
     ActionNotAvailable,
     #[msg("Amount exceeds the per-action cap.")]
     CapExceeded,

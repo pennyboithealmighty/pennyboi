@@ -56,6 +56,7 @@ export interface Briefing {
   treasury: {
     balance_sol: number;
     threshold_step: number;
+    actions_banked: number; // acts he owes (banked), works through one per cooldown
   };
   available_actions: AvailableActions;
   since_last_threshold: {
@@ -83,6 +84,7 @@ export function renderBriefing(b: Briefing): string {
   lines.push("treasury:");
   lines.push(`  balance_sol: ${b.treasury.balance_sol}`);
   lines.push(`  threshold_step: ${b.treasury.threshold_step}`);
+  lines.push(`  actions_banked: ${b.treasury.actions_banked}`);
   lines.push("");
   lines.push("available_actions:");
   if (b.available_actions.burn) {

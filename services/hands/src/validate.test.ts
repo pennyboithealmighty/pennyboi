@@ -9,13 +9,13 @@ test("none is always valid", () => {
   assert.deepEqual(validateOnchain({ action: "none", params: {} }, fakeConfig(), NOW), []);
 });
 
-test("rejects when the on-chain flag is not set", () => {
+test("rejects when no acts are banked", () => {
   const errs = validateOnchain(
     { action: "burn", params: { amount_lamports: 1 } },
-    fakeConfig({ actionAvailable: false }),
+    fakeConfig({ actionsAvailable: 0 }),
     NOW
   );
-  assert.ok(errs.some((e) => e.includes("flag is not set")));
+  assert.ok(errs.some((e) => e.includes("no banked acts")));
 });
 
 test("burn: within cap passes, over cap fails", () => {

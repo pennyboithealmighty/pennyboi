@@ -15,6 +15,7 @@ export interface TreasuryStatus {
   step: number;
   untilNextSol: number;
   available: string[];
+  actionsBanked: number; // banked acts he owes
 }
 
 export class ChainReader {
@@ -47,6 +48,7 @@ export class ChainReader {
       step: cfg.thresholdStep,
       untilNextSol: untilNext,
       available: Object.keys(avail),
+      actionsBanked: cfg.actionsAvailable,
     };
   }
 }

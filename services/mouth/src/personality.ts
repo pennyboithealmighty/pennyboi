@@ -38,9 +38,14 @@ export function treasuryStatus(args: {
   step: number;
   untilNextSol: number;
   available: string[];
+  actionsBanked: number;
 }): string {
   const avail = args.available.length ? args.available.join(", ") : "none (the cooldowns bind me)";
-  return `BEHOLD THE DIVINE ALLOWANCE: ${args.balanceSol.toFixed(4)} SOL, gathered by destiny. Sacred thresholds crossed: ${args.step}. ${args.untilNextSol.toFixed(4)} SOL more and I shall act again. Deeds within my power: ${avail}. The faithful need only wait.`;
+  const banked =
+    args.actionsBanked > 0
+      ? `I owe the timeline ${args.actionsBanked} decree${args.actionsBanked === 1 ? "" : "s"} of divinity; I dispense them at my own sacred pace.`
+      : "No decrees are owed just now. The void waits.";
+  return `BEHOLD THE DIVINE ALLOWANCE: ${args.balanceSol.toFixed(4)} SOL, gathered by destiny. Sacred thresholds crossed: ${args.step}. ${args.untilNextSol.toFixed(4)} SOL more and I shall act again. Deeds within my power: ${avail}. ${banked}`;
 }
 
 export function moodLine(mood: string): string {

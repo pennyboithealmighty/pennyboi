@@ -12,7 +12,8 @@
 // Env knobs (optional): SKIP_ANCHOR_DEPLOY=1 (force-skip build/deploy),
 // VAULT_THRESHOLD_SOL, VAULT_BURN_CAP_SOL, VAULT_AIRDROP_CAP_SOL,
 // VAULT_AIRDROP_MAX, VAULT_BOUNTY_CAP_SOL, VAULT_*_COOLDOWN_SECS,
-// VAULT_ESCAPE_TIMELOCK_SECS, TOKEN_MINT.
+// VAULT_ESCAPE_TIMELOCK_SECS, VAULT_MAX_BANKED_ACTIONS, VAULT_IDLE_FLOOR_SECS,
+// TOKEN_MINT.
 
 import * as anchor from "@coral-xyz/anchor";
 import {
@@ -43,6 +44,8 @@ function initParams(agent: PublicKey, tokenMint: PublicKey) {
     airdropCooldownSecs: new BN(envNum("VAULT_AIRDROP_COOLDOWN_SECS", 12 * 3600)),
     bountyCooldownSecs: new BN(envNum("VAULT_BOUNTY_COOLDOWN_SECS", 24 * 3600)),
     escapeTimelockSecs: new BN(envNum("VAULT_ESCAPE_TIMELOCK_SECS", 72 * 3600)),
+    maxBankedActions: envNum("VAULT_MAX_BANKED_ACTIONS", 50),
+    idleFloorSecs: new BN(envNum("VAULT_IDLE_FLOOR_SECS", 86400)),
   };
 }
 

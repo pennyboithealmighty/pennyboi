@@ -9,7 +9,7 @@ const SELLER = "Vote111111111111111111111111111111111111111";
 function briefing(over: Partial<Briefing["since_last_threshold"]> = {}): Briefing {
   return {
     mood: "petty",
-    treasury: { balance_sol: 2, threshold_step: 1 },
+    treasury: { balance_sol: 2, threshold_step: 1, actions_banked: 0 },
     available_actions: {},
     since_last_threshold: {
       top_new_buyers: [{ wallet: BUYER, sol_in: 1 }],

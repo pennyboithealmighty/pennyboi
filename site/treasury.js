@@ -45,6 +45,7 @@
     switch (f.type) {
       case "bool": return view.getUint8(o) !== 0;
       case "u8": return view.getUint8(o);
+      case "u16": return view.getUint16(o, true);
       case "u32": return view.getUint32(o, true);
       case "u64": return Number(view.getBigUint64(o, true));
       case "i64": return Number(view.getBigInt64(o, true));
@@ -90,8 +91,11 @@
     var pct = thr > 0 ? Math.max(0, Math.min(1, inStep / thr)) : 0;
     var until = Math.max(0, (d.lastThreshold + thr - d.balance));
     $("tp-progress").style.width = (pct * 100).toFixed(1) + "%";
-    $("tp-until").textContent = d.flag
-      ? "a decree is pending — the sacred threshold is crossed"
+    var banked = d.banked || 0;
+    var bankedEl = $("tp-banked");
+    if (bankedEl) bankedEl.textContent = String(banked);
+    $("tp-until").textContent = banked > 0
+      ? banked + " decree" + (banked === 1 ? "" : "s") + " banked — a deed is owed"
       : sol(until) + " SOL until the next decree";
 
     setChip("tp-burn", "Burn", d.burnCap, d.lastBurn, d.burnCd, nowSecs);
@@ -126,7 +130,7 @@
         step: read(view, idlLayout, "threshold_step"),
         thresholdLamports: read(view, idlLayout, "threshold_lamports"),
         lastThreshold: read(view, idlLayout, "last_threshold_balance"),
-        flag: read(view, idlLayout, "action_available"),
+        banked: read(view, idlLayout, "actions_available"),
         burnCap: read(view, idlLayout, "burn_cap_lamports"),
         airdropCap: read(view, idlLayout, "airdrop_cap_lamports"),
         bountyCap: read(view, idlLayout, "bounty_cap_lamports"),

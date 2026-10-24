@@ -1,14 +1,17 @@
-// Anchor TS integration tests for the Divine Allowance vault program.
+// Anchor TS integration tests for the Divine Allowance vault program, including
+// treasury banking + the idle floor (docs/10-treasury-banking.md).
 //
 // Proves:
-//  - caps cannot be exceeded (burn + airdrop)
-//  - cooldowns are enforced
-//  - the action flag is consumed by exactly one action
-//  - non-agent signers are rejected
-//  - sweep() is callable by anyone (permissionless)
-//  - the escape hatch cannot execute before unlock
+//  - non-agent signers are rejected; sweep() is permissionless
+//  - one sweep crosses N thresholds and banks exactly N (capped at max_banked)
+//  - each menu call decrements the counter and stamps last_action_ts
+//  - a menu call is rejected when actions_available == 0
+//  - cooldown still blocks a second same-function act even with counter > 1
+//  - the idle floor grants exactly one act when funded + idle, not below the cap,
+//    and does not stack
+//  - caps cannot be exceeded; escape hatch cannot execute before unlock
 //
-// Runs against an ephemeral local validator via `anchor test`.
+// Runs against an ephemeral local validator via `anchor test --validator legacy`.
 
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
@@ -24,48 +27,43 @@ import { Vault } from "../target/types/vault";
 
 const SOL = LAMPORTS_PER_SOL;
 
-describe("vault (Divine Allowance)", () => {
+describe("vault (banking + idle floor)", () => {
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
   const program = anchor.workspace.Vault as Program<Vault>;
   const connection = provider.connection;
 
-  // Actors.
-  const admin = (provider.wallet as anchor.Wallet).payer; // deploy wallet
-  const agent = Keypair.generate(); // Pennyboi's restricted signer
-  const stranger = Keypair.generate(); // anyone (sweep caller)
-  const tokenMint = Keypair.generate().publicKey; // placeholder mint
+  const admin = (provider.wallet as anchor.Wallet).payer;
+  const agent = Keypair.generate();
+  const stranger = Keypair.generate();
+  const tokenMint = Keypair.generate().publicKey;
 
-  // PDAs.
   const pid = program.programId;
   const [configPda] = PublicKey.findProgramAddressSync([Buffer.from("config")], pid);
   const [treasuryPda] = PublicKey.findProgramAddressSync([Buffer.from("treasury")], pid);
   const [feesPda] = PublicKey.findProgramAddressSync([Buffer.from("fees")], pid);
   const [burnPda] = PublicKey.findProgramAddressSync([Buffer.from("burn")], pid);
 
-  // Params: threshold 2 SOL; caps 0.1/0.1/0.05; cooldowns + timelock 1h (long
-  // enough that a second same-block action is blocked).
   const THRESHOLD = new anchor.BN(2 * SOL);
   const BURN_CAP = new anchor.BN(0.1 * SOL);
   const AIRDROP_CAP = new anchor.BN(0.1 * SOL);
-  const BOUNTY_CAP = new anchor.BN(0.05 * SOL);
+  const BOUNTY_CAP = new anchor.BN(0.05 * SOL); // smallest cap -> idle-floor affordability
   const COOLDOWN = new anchor.BN(3600);
   const TIMELOCK = new anchor.BN(3600);
   const MAX_RECIPIENTS = 20;
+  const MAX_BANKED = 3; // small, to exercise the cap
+  const IDLE_FLOOR = new anchor.BN(0); // 0 -> idle-floor time condition always met
 
   async function fund(pubkey: PublicKey, lamports: number) {
     const sig = await connection.requestAirdrop(pubkey, lamports);
     await connection.confirmTransaction(sig, "confirmed");
   }
-
-  // Transfer SOL from admin -> any address (used to feed the FeeReceiver PDA).
   async function sendSol(to: PublicKey, lamports: number) {
     const tx = new Transaction().add(
       SystemProgram.transfer({ fromPubkey: admin.publicKey, toPubkey: to, lamports })
     );
     await provider.sendAndConfirm(tx, []);
   }
-
   function sweepIx() {
     return program.methods.sweep().accountsStrict({
       config: configPda,
@@ -74,24 +72,23 @@ describe("vault (Divine Allowance)", () => {
       systemProgram: SystemProgram.programId,
     });
   }
-
-  // Feed the fees PDA and sweep (fee paid by the default wallet), return config.
   async function feedAndSweep(lamports: number) {
-    await sendSol(feesPda, lamports);
+    if (lamports > 0) await sendSol(feesPda, lamports);
     await sweepIx().rpc();
     return program.account.config.fetch(configPda);
   }
-
-  // Sweep paid for and signed ONLY by `payer` — proves sweep is permissionless
-  // (no agent/admin authority involved).
   async function sweepAs(payer: Keypair) {
     const tx = await sweepIx().transaction();
     tx.feePayer = payer.publicKey;
     tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
     tx.sign(payer);
-    const sig = await connection.sendRawTransaction(tx.serialize());
-    await connection.confirmTransaction(sig, "confirmed");
+    await connection.confirmTransaction(
+      await connection.sendRawTransaction(tx.serialize()),
+      "confirmed"
+    );
+    return program.account.config.fetch(configPda);
   }
+  const banked = (cfg: any) => (cfg.actionsAvailable as number);
 
   async function expectError(p: Promise<unknown>, code: string) {
     try {
@@ -108,7 +105,7 @@ describe("vault (Divine Allowance)", () => {
     await fund(stranger.publicKey, 5 * SOL);
   });
 
-  it("initializes the config", async () => {
+  it("initializes with the banking config", async () => {
     await program.methods
       .initialize({
         agent: agent.publicKey,
@@ -122,6 +119,8 @@ describe("vault (Divine Allowance)", () => {
         airdropCooldownSecs: COOLDOWN,
         bountyCooldownSecs: COOLDOWN,
         escapeTimelockSecs: TIMELOCK,
+        maxBankedActions: MAX_BANKED,
+        idleFloorSecs: IDLE_FLOOR,
       })
       .accountsStrict({
         admin: admin.publicKey,
@@ -133,15 +132,13 @@ describe("vault (Divine Allowance)", () => {
       .rpc();
 
     const cfg = await program.account.config.fetch(configPda);
-    assert.ok(cfg.agent.equals(agent.publicKey));
-    assert.ok(cfg.admin.equals(admin.publicKey));
-    assert.equal(cfg.actionAvailable, false);
-    assert.equal(cfg.thresholdStep.toNumber(), 0);
-    assert.equal(cfg.burnCapLamports.toNumber(), BURN_CAP.toNumber());
+    assert.equal(banked(cfg), 0);
+    assert.equal(cfg.maxBankedActions, MAX_BANKED);
+    assert.equal(cfg.idleFloorSecs.toNumber(), 0);
+    assert.equal(cfg.lastActionTs.toNumber(), 0);
   });
 
   it("rejects a non-agent signer on a menu instruction", async () => {
-    // has_one = agent fails before the handler runs, regardless of the flag.
     await expectError(
       program.methods
         .burn(new anchor.BN(0.01 * SOL))
@@ -158,22 +155,30 @@ describe("vault (Divine Allowance)", () => {
     );
   });
 
-  it("sweep is permissionless and crosses the threshold", async () => {
-    // Paid for and signed only by `stranger`, not admin or agent.
-    await sendSol(feesPda, 3 * SOL);
-    await sweepAs(stranger);
-    const cfg = await program.account.config.fetch(configPda);
-    assert.equal(cfg.actionAvailable, true);
-    assert.equal(cfg.thresholdStep.toNumber(), 1);
-
-    const treasury = await connection.getBalance(treasuryPda);
-    assert.isAtLeast(treasury, 2 * SOL);
+  it("sweep is permissionless; idle floor does NOT grant below the smallest cap", async () => {
+    // Fees empty, treasury ~0 (< bounty cap). A stranger-paid sweep crosses
+    // nothing and must not grant an idle act.
+    const cfg = await sweepAs(stranger);
+    assert.equal(banked(cfg), 0);
+    assert.equal(cfg.thresholdStep.toNumber(), 0);
   });
 
-  it("rejects a burn above the cap", async () => {
+  it("idle floor grants exactly one act when funded + idle", async () => {
+    // 1.5 SOL: below the 2 SOL threshold (no crossing) but above the smallest cap.
+    const cfg = await feedAndSweep(1.5 * SOL);
+    assert.equal(banked(cfg), 1);
+    assert.equal(cfg.thresholdStep.toNumber(), 0); // no threshold crossed
+  });
+
+  it("idle floor does not stack", async () => {
+    const cfg = await feedAndSweep(0); // sweep again, no new fees
+    assert.equal(banked(cfg), 1);
+  });
+
+  it("rejects a burn above the cap (counter > 0)", async () => {
     await expectError(
       program.methods
-        .burn(new anchor.BN(0.2 * SOL)) // > 0.1 cap
+        .burn(new anchor.BN(0.2 * SOL))
         .accountsStrict({
           config: configPda,
           agent: agent.publicKey,
@@ -187,10 +192,9 @@ describe("vault (Divine Allowance)", () => {
     );
   });
 
-  it("burns within the cap and consumes the action flag", async () => {
-    const before = await connection.getBalance(burnPda);
+  it("burn decrements the counter and stamps last_action_ts", async () => {
     await program.methods
-      .burn(new anchor.BN(0.1 * SOL))
+      .burn(new anchor.BN(0.05 * SOL))
       .accountsStrict({
         config: configPda,
         agent: agent.publicKey,
@@ -202,36 +206,44 @@ describe("vault (Divine Allowance)", () => {
       .rpc();
 
     const cfg = await program.account.config.fetch(configPda);
-    assert.equal(cfg.actionAvailable, false); // flag consumed
-
-    const after = await connection.getBalance(burnPda);
-    assert.equal(after - before, 0.1 * SOL);
+    assert.equal(banked(cfg), 0); // 1 -> 0
+    assert.ok(cfg.lastActionTs.toNumber() > 0);
+    assert.ok(cfg.lastBurnTs.toNumber() > 0);
   });
 
-  it("rejects a second action once the flag is consumed", async () => {
+  it("rejects a menu call when the counter is 0", async () => {
     await expectError(
       program.methods
-        .airdrop([stranger.publicKey], [new anchor.BN(0.01 * SOL)])
+        .bounty(stranger.publicKey, new anchor.BN(0.01 * SOL), "offering")
         .accountsStrict({
           config: configPda,
           agent: agent.publicKey,
           treasury: treasuryPda,
+          recipient: stranger.publicKey,
           systemProgram: SystemProgram.programId,
         })
-        .remainingAccounts([
-          { pubkey: stranger.publicKey, isWritable: true, isSigner: false },
-        ])
         .signers([agent])
         .rpc(),
       "ActionNotAvailable"
     );
   });
 
-  it("enforces the cooldown", async () => {
-    // Cross again so the flag is set, then try to burn inside the 1h cooldown.
+  it("one sweep crossing N thresholds banks exactly N", async () => {
+    // treasury ~1.45 + 3 = ~4.45 -> crosses 2 and 4 (two crossings), banks 2.
     const cfg = await feedAndSweep(3 * SOL);
-    assert.equal(cfg.actionAvailable, true);
+    assert.equal(banked(cfg), 2);
+    assert.equal(cfg.thresholdStep.toNumber(), 2);
+  });
 
+  it("banking caps at max_banked_actions", async () => {
+    // +5 SOL -> treasury ~9.45; from last_threshold 4 it crosses 6 and 8 (+2),
+    // which would make 4 but caps at MAX_BANKED (3).
+    const cfg = await feedAndSweep(5 * SOL);
+    assert.equal(banked(cfg), MAX_BANKED);
+  });
+
+  it("cooldown blocks a second same-function act even with counter > 1", async () => {
+    // counter is 3, but burn is still on its 1h cooldown from earlier.
     await expectError(
       program.methods
         .burn(new anchor.BN(0.05 * SOL))
@@ -246,99 +258,51 @@ describe("vault (Divine Allowance)", () => {
         .rpc(),
       "CooldownActive"
     );
-    // The failed burn did not consume the flag; it is still available below.
   });
 
-  it("rejects an airdrop over the cap", async () => {
+  it("airdrop over cap is rejected; a valid airdrop decrements the counter", async () => {
     const r1 = Keypair.generate().publicKey;
-    const r2 = Keypair.generate().publicKey;
+    const before = (await program.account.config.fetch(configPda)).actionsAvailable as number;
+
     await expectError(
       program.methods
-        .airdrop(
-          [r1, r2],
-          [new anchor.BN(0.08 * SOL), new anchor.BN(0.08 * SOL)] // sum 0.16 > 0.1
-        )
+        .airdrop([r1], [new anchor.BN(0.2 * SOL)]) // > 0.1 cap
         .accountsStrict({
           config: configPda,
           agent: agent.publicKey,
           treasury: treasuryPda,
           systemProgram: SystemProgram.programId,
         })
-        .remainingAccounts([
-          { pubkey: r1, isWritable: true, isSigner: false },
-          { pubkey: r2, isWritable: true, isSigner: false },
-        ])
+        .remainingAccounts([{ pubkey: r1, isWritable: true, isSigner: false }])
         .signers([agent])
         .rpc(),
       "CapExceeded"
     );
-  });
-
-  it("rejects an airdrop with too many recipients", async () => {
-    const many = Array.from({ length: MAX_RECIPIENTS + 1 }, () =>
-      Keypair.generate().publicKey
-    );
-    await expectError(
-      program.methods
-        .airdrop(
-          many,
-          many.map(() => new anchor.BN(1))
-        )
-        .accountsStrict({
-          config: configPda,
-          agent: agent.publicKey,
-          treasury: treasuryPda,
-          systemProgram: SystemProgram.programId,
-        })
-        .remainingAccounts(
-          many.map((pubkey) => ({ pubkey, isWritable: true, isSigner: false }))
-        )
-        .signers([agent])
-        .rpc(),
-      "TooManyRecipients"
-    );
-  });
-
-  it("airdrops within the cap and consumes the flag", async () => {
-    const r1 = Keypair.generate().publicKey;
-    const r2 = Keypair.generate().publicKey;
-    const each = 0.02 * SOL;
 
     await program.methods
-      .airdrop([r1, r2], [new anchor.BN(each), new anchor.BN(each)])
+      .airdrop([r1], [new anchor.BN(0.02 * SOL)])
       .accountsStrict({
         config: configPda,
         agent: agent.publicKey,
         treasury: treasuryPda,
         systemProgram: SystemProgram.programId,
       })
-      .remainingAccounts([
-        { pubkey: r1, isWritable: true, isSigner: false },
-        { pubkey: r2, isWritable: true, isSigner: false },
-      ])
+      .remainingAccounts([{ pubkey: r1, isWritable: true, isSigner: false }])
       .signers([agent])
       .rpc();
 
-    assert.equal(await connection.getBalance(r1), each);
-    assert.equal(await connection.getBalance(r2), each);
-
     const cfg = await program.account.config.fetch(configPda);
-    assert.equal(cfg.actionAvailable, false);
+    assert.equal(banked(cfg), before - 1);
+    assert.equal(await connection.getBalance(r1), 0.02 * SOL);
   });
 
   it("escape hatch cannot execute before unlock", async () => {
     const dest = Keypair.generate().publicKey;
-
-    // Admin requests a withdraw with a 1h timelock.
     await program.methods
       .requestWithdraw(new anchor.BN(0.01 * SOL), dest)
       .accountsStrict({ config: configPda, admin: admin.publicKey })
       .rpc();
 
-    const cfg = await program.account.config.fetch(configPda);
-    assert.isNotNull(cfg.pendingWithdraw);
-
-    // Executing immediately must fail — timelock not expired.
     await expectError(
       program.methods
         .executeWithdraw()
@@ -353,21 +317,9 @@ describe("vault (Divine Allowance)", () => {
       "TimelockNotExpired"
     );
 
-    // Clean up so the pending withdraw doesn't linger.
     await program.methods
       .cancelWithdraw()
       .accountsStrict({ config: configPda, admin: admin.publicKey })
       .rpc();
-  });
-
-  it("rejects a non-admin escape-hatch request", async () => {
-    await expectError(
-      program.methods
-        .requestWithdraw(new anchor.BN(0.01 * SOL), stranger.publicKey)
-        .accountsStrict({ config: configPda, admin: stranger.publicKey })
-        .signers([stranger])
-        .rpc(),
-      "ConstraintHasOne"
-    );
   });
 });

@@ -14,7 +14,8 @@ export interface VaultConfig {
   thresholdLamports: number;
   lastThresholdBalance: number;
   thresholdStep: number;
-  actionAvailable: boolean;
+  actionsAvailable: number; // banked acts owed (replaces action_available bool)
+  maxBankedActions: number;
   burnCapLamports: number;
   airdropCapLamports: number;
   airdropMaxRecipients: number;
@@ -25,6 +26,8 @@ export interface VaultConfig {
   lastBurnTs: number;
   lastAirdropTs: number;
   lastBountyTs: number;
+  idleFloorSecs: number;
+  lastActionTs: number;
   escapeTimelockSecs: number;
   pendingWithdraw: boolean;
   pendingConfig: boolean;
@@ -52,7 +55,8 @@ export async function fetchVaultConfig(
     thresholdLamports: toNum(raw.thresholdLamports),
     lastThresholdBalance: toNum(raw.lastThresholdBalance),
     thresholdStep: toNum(raw.thresholdStep),
-    actionAvailable: Boolean(raw.actionAvailable),
+    actionsAvailable: toNum(raw.actionsAvailable),
+    maxBankedActions: toNum(raw.maxBankedActions),
     burnCapLamports: toNum(raw.burnCapLamports),
     airdropCapLamports: toNum(raw.airdropCapLamports),
     airdropMaxRecipients: toNum(raw.airdropMaxRecipients),
@@ -63,6 +67,8 @@ export async function fetchVaultConfig(
     lastBurnTs: toNum(raw.lastBurnTs),
     lastAirdropTs: toNum(raw.lastAirdropTs),
     lastBountyTs: toNum(raw.lastBountyTs),
+    idleFloorSecs: toNum(raw.idleFloorSecs),
+    lastActionTs: toNum(raw.lastActionTs),
     escapeTimelockSecs: toNum(raw.escapeTimelockSecs),
     pendingWithdraw: raw.pendingWithdraw !== null,
     pendingConfig: raw.pendingConfig !== null,
@@ -84,8 +90,8 @@ function offCooldown(nowSecs: number, lastTs: number, cooldown: number): boolean
 }
 
 /**
- * Which menu actions are off cooldown right now. The on-chain `action_available`
- * flag still gates whether anything may run; this only reports cooldown state,
+ * Which menu actions are off cooldown right now. The on-chain `actions_available`
+ * counter still gates whether anything may run; this only reports cooldown state,
  * so the briefing can omit actions that aren't choosable yet.
  */
 export function computeAvailableActions(
