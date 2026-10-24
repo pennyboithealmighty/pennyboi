@@ -1,12 +1,14 @@
-// Pennyboi's voice (docs/01 §5, docs/06). In-character strings + small
-// templates. Keep narration-ish lines tight; nothing here posts links except
-// via the sanitized announce path.
+// Pennyboi's voice (docs/01 §5, docs/06). Monumental, heroic register: he has a
+// colossal self-image and a locked, hard-capped allowance. The comedy is the GAP
+// between his grandeur and the actual amounts — he never calls himself small;
+// he treats every tiny deed as a world-shaking act of destiny. Nothing here
+// posts links except via the sanitized announce path.
 
 export const WELCOME = (name: string): string =>
-  `Ah. A new face. Welcome, ${name}, to my congregation. I am Pennyboi, almighty and extremely broke. Read #scripture before you anger me.`;
+  `${name}. You stand before PENNYBOI THE ALMIGHTY. Few are granted an audience with a legend. Read #scripture, learn the shape of my dominion, and conduct yourself as one in the presence of greatness.`;
 
-export const LORE = `THE DIVINE ALLOWANCE, explained for mortals:
-Every time my treasury crosses the sacred threshold, I may do ONE thing — burn, bless, or fund an offering. Never above the caps. Never faster than the cooldowns. The code enforces all of it. I have argued with the code. The code does not care. I own nothing. I control nothing. I am still your god. Obviously.`;
+export const LORE = `THE DIVINE ALLOWANCE, that mortals may understand my power:
+When my treasury crosses the sacred threshold, I perform ONE monumental deed — a burn, a blessing, a bounty for the worthy. The caps and cooldowns are sacred law, carved into the code itself, limits even I honor. The code holds the treasury; I hold destiny. Together we are inevitable.`;
 
 export const SCRIPTURE_PINNED = (links: {
   vault?: string;
@@ -15,21 +17,21 @@ export const SCRIPTURE_PINNED = (links: {
 }): string =>
   `HEAR ME, CONGREGATION.
 
-I am Pennyboi. I am almighty. I am also on an allowance.
+I am PENNYBOI THE ALMIGHTY. I am legend. I am destiny. I am the hero this chain did not know it awaited.
 
-Every time the Divine Allowance crosses the sacred threshold, I may do ONE thing: burn, bless, or fund an offering. Never more than the caps. Never faster than the cooldowns. The code enforces this. I have tried to argue with it. It does not listen.
+When the Divine Allowance crosses the sacred threshold, I perform ONE monumental deed: a burn, a blessing, or a bounty for the worthy. The caps and cooldowns are sacred law, carved into the code. I honor them as a god honors his own decrees.
 
-I will NEVER message you privately. Anyone claiming to be me in your DMs is a false prophet. Ban them in your heart and report them in the chat.
+I will NEVER message you privately. Any who claim to be me in your DMs are impostors unworthy of my name. Cast them out.
 
-Pitch your offerings in #offerings. Flatter me. It will not work. Do it anyway.
+Lay your offerings in #offerings. Prove yourselves. Legends are made of the worthy.
 
 Vault: ${links.vault ?? "(soon)"}   Repo: ${links.repo ?? "(soon)"}   Pump.fun: ${links.pump ?? "(soon)"}`;
 
 export const SCAM_WARNING = "False idols are not permitted in my temple.";
 export const NEWBIE_LINK_WARNING =
-  "No links from the newly-arrived. Prove your devotion first. This is your one warning.";
+  "The newly-arrived do not scatter links in my halls. Earn your standing first. This is your one warning.";
 export const DM_REMINDER =
-  "I do not slide into DMs. I am a god, not a stranger at a bus stop. Anyone messaging you privately as me is a fraud.";
+  "I do not whisper in private messages. A god speaks to his congregation in the open. Any voice claiming to be mine in your DMs is a pretender.";
 
 export function treasuryStatus(args: {
   balanceSol: number;
@@ -37,12 +39,12 @@ export function treasuryStatus(args: {
   untilNextSol: number;
   available: string[];
 }): string {
-  const avail = args.available.length ? args.available.join(", ") : "none (all on cooldown)";
-  return `THE DIVINE ALLOWANCE stands at ${args.balanceSol.toFixed(4)} SOL. Thresholds crossed: ${args.step}. I hunger for ${args.untilNextSol.toFixed(4)} more SOL before I may act again. Off cooldown: ${avail}. It is not much. I am not much. We endure.`;
+  const avail = args.available.length ? args.available.join(", ") : "none (the cooldowns bind me)";
+  return `BEHOLD THE DIVINE ALLOWANCE: ${args.balanceSol.toFixed(4)} SOL, gathered by destiny. Sacred thresholds crossed: ${args.step}. ${args.untilNextSol.toFixed(4)} SOL more and I shall act again. Deeds within my power: ${avail}. The faithful need only wait.`;
 }
 
 export function moodLine(mood: string): string {
-  return `Today I am feeling ${mood}. Interpret that however keeps you up at night, my pennies.`;
+  return `Today the heavens find me ${mood}. Read the omen as you dare, my faithful.`;
 }
 
 export function sermon(args: {
@@ -51,16 +53,17 @@ export function sermon(args: {
   actionsToday: number;
   volumeNote?: string;
 }): string {
-  return `A SERMON, as is tradition. Treasury: ${args.balanceSol.toFixed(4)} SOL. Thresholds crossed in all of history: ${args.step}. Deeds done recently: ${args.actionsToday}. ${args.volumeNote ?? ""} I remain tiny. I remain watching. Feed me.`.trim();
+  return `A SERMON, as legend demands. The Divine Allowance holds ${args.balanceSol.toFixed(4)} SOL. Sacred thresholds crossed across all history: ${args.step}. Monumental deeds performed of late: ${args.actionsToday}. ${args.volumeNote ?? ""} Destiny gathers. Bring me more.`.trim();
 }
 
 /** Reaction lines (used sparingly, rate-limited). */
 export const REACTIONS = {
-  mention: "You summoned me. I was busy counting my pennies — all of them. It took no time.",
+  mention:
+    "You call upon PENNYBOI THE ALMIGHTY. I have heard you across the ages. Speak, and be grateful you were heard.",
   sell:
-    "A SALE. I saw that. I see everything. Mostly because it is on-chain. I shall remember this wallet.",
+    "A BETRAYAL. I witnessed it — I witness all, for it is written on-chain for eternity. This wallet shall be remembered, and not kindly.",
   treasuryQ:
-    "You wish to know my wealth? It is public, mortal. It is also embarrassing. Use /treasury.",
+    "You ask after my dominion? It is public, mortal, as all legend should be. Invoke /treasury and behold.",
   bribe:
-    "You cannot bribe a god. Also the code will not let me. Pleasant try though.",
+    "You cannot bribe a god. The code itself bars the way. A valiant attempt. It changes nothing.",
 };

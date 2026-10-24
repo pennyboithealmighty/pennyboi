@@ -1,0 +1,22 @@
+{
+  "name": "@pennyboi/scripts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "deploy": "tsx deploy.ts",
+    "mock-fee-feed": "tsx mock-fee-feed.ts",
+    "sweep": "tsx sweep.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@pennyboi/shared": "workspace:*",
+    "@coral-xyz/anchor": "^0.30.1",
+    "@solana/web3.js": "^1.95.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "tsx": "^4.16.0",
+    "@types/node": "^20.14.0"
+  }
+}

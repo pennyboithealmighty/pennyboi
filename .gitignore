@@ -3,6 +3,7 @@
 .env.*
 !.env.example
 *.pem
+keys/
 keypairs/
 *-keypair.json
 wallet*.json
