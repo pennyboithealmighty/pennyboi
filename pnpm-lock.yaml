@@ -82,13 +82,13 @@ importers:
       '@solana/web3.js':
         specifier: ^1.95.0
         version: 1.99.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
-      better-sqlite3:
-        specifier: ^11.3.0
-        version: 11.10.0
+      express:
+        specifier: ^4.19.2
+        version: 4.22.3
     devDependencies:
-      '@types/better-sqlite3':
-        specifier: ^7.6.11
-        version: 7.6.13
+      '@types/express':
+        specifier: ^4.17.21
+        version: 4.17.25
       '@types/node':
         specifier: ^20.14.0
         version: 20.19.43

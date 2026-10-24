@@ -61,12 +61,15 @@ export interface LoadedVault {
 }
 
 /**
- * Load the vault IDL and return a read-only Anchor program plus its PDAs.
- * Returns null (with a reason) when the IDL or program id isn't available yet
- * — e.g. before the first devnet deploy — so callers can degrade gracefully.
+ * Load the vault IDL and return an Anchor program plus its PDAs. Pass a `wallet`
+ * to get a signing program (e.g. the Hands agent); omit it for read-only use (a
+ * throwaway wallet that never signs). Returns a reason instead of throwing when
+ * the IDL or program id isn't available yet — e.g. before the first devnet
+ * deploy — so callers can degrade gracefully.
  */
 export function tryLoadVault(
-  connection: Connection
+  connection: Connection,
+  wallet?: anchor.Wallet
 ): { ok: true; vault: LoadedVault } | { ok: false; reason: string } {
   const idlPath = defaultIdlPath();
   if (!existsSync(idlPath)) {
@@ -94,10 +97,10 @@ export function tryLoadVault(
     return { ok: false, reason: `invalid program id: ${addr}` };
   }
 
-  // Read-only provider: a throwaway wallet that never signs anything.
+  // Signing provider when a wallet is given; otherwise a throwaway read-only one.
   const provider = new anchor.AnchorProvider(
     connection,
-    new anchor.Wallet(Keypair.generate()),
+    wallet ?? new anchor.Wallet(Keypair.generate()),
     { commitment: connection.commitment ?? "confirmed" }
   );
   const idlWithAddr = { ...idl, address: programId.toBase58() } as anchor.Idl;
