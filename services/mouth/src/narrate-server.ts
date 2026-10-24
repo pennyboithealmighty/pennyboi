@@ -6,6 +6,7 @@ import { extractMemory, type Briefing } from "@pennyboi/shared";
 import express, { type Express, type Request, type Response } from "express";
 import { announce } from "./announce.js";
 import type { MouthCtx } from "./deps.js";
+import { registerPublicApi } from "./public-api.js";
 
 interface NarratePayload {
   decision?: {
@@ -26,6 +27,14 @@ export function createNarrateServer(m: MouthCtx): Express {
   app.get("/health", (_req: Request, res: Response) => {
     res.json({ ok: true, service: "mouth" });
   });
+
+  // Additive read-only public API for the website. Wrapped so a failure here can
+  // never take down /narrate or affect the bot.
+  try {
+    registerPublicApi(app, { db: m.db, chain: m.chain, cfg: m.cfg, log: m.log });
+  } catch (e) {
+    m.log.error("failed to register public API (bot unaffected)", e);
+  }
 
   app.post("/narrate", async (req: Request, res: Response) => {
     const b = req.body as NarratePayload;

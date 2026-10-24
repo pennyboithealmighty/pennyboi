@@ -89,6 +89,28 @@ pm2 delete all      # remove the processes
 # kill the caffeinate you backgrounded, too
 ```
 
+## Public website API (site v2)
+
+Mouth serves a read-only JSON API under `/public/*` (treasury, decrees,
+offerings, grudges, loyal, status) for the website — additive, CORS-allowlisted,
+60/min per IP, 30s cache, and never exposing owner/mod/key/member data. It runs
+in the Mouth process, so it only goes live after `pb-mouth` is restarted on the
+new build (the dry run itself is unaffected by the restart).
+
+Because Mouth runs on the Mac, the API needs a **public URL** before the site's
+live panels work for visitors. A **Cloudflare Tunnel** is the intended route:
+
+```bash
+# one-time: install cloudflared, then expose the Mouth port (8790)
+cloudflared tunnel --url http://localhost:8790
+```
+
+Take the printed `https://<something>.trycloudflare.com` URL and put it in
+`site/config.js` as `API_BASE` (and in `.env` as `API_PUBLIC_BASE_URL` for
+reference). Until then the site degrades gracefully to "the oracle is silent"
+placeholders — never a broken layout. The home-page **live treasury panel**
+reads Solana RPC directly in the browser, so it works without the tunnel.
+
 ## What to expect
 
 - On devnet there are **no real traders**, so the briefing's buyers / sellers /
