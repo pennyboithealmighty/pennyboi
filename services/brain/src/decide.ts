@@ -18,12 +18,21 @@ export interface DecideInput {
   callLLM: CallLLM;
 }
 
+/** Per-attempt record for diagnostics (raw model text + why it was rejected). */
+export interface AttemptLog {
+  attempt: number; // 1-based
+  raw?: string; // raw LLM text (undefined if the call itself threw)
+  ok: boolean;
+  error?: string; // parse / validation / call error when not ok
+}
+
 export interface DecideResult {
   decision: Decision;
   attempts: number;
   fellBack: boolean;
   errors: string[];
   raw?: string;
+  attemptsLog: AttemptLog[];
 }
 
 export function fallbackDecision(): Decision {
@@ -38,10 +47,12 @@ export function fallbackDecision(): Decision {
 export async function decide(input: DecideInput): Promise<DecideResult> {
   const baseUser = input.text ?? renderBriefing(input.briefing);
   const allErrors: string[] = [];
+  const attemptsLog: AttemptLog[] = [];
   let lastRaw: string | undefined;
 
   // attempt 0 = first try; attempt 1 = one retry with the error appended.
   for (let attempt = 0; attempt <= 1; attempt++) {
+    const n = attempt + 1;
     const user =
       attempt === 0
         ? baseUser
@@ -52,28 +63,35 @@ export async function decide(input: DecideInput): Promise<DecideResult> {
       raw = await input.callLLM(SYSTEM_PROMPT, user);
       lastRaw = raw;
     } catch (e) {
-      allErrors.push(`LLM call failed: ${(e as Error).message}`);
+      const error = `LLM call failed: ${(e as Error).message}`;
+      allErrors.push(error);
+      attemptsLog.push({ attempt: n, ok: false, error });
       continue;
     }
 
     const parsed = parseDecision(raw);
     if (!parsed.ok) {
       allErrors.push(parsed.error);
+      attemptsLog.push({ attempt: n, raw, ok: false, error: parsed.error });
       continue;
     }
 
     const vErrors = validateDecision(parsed.decision, input.briefing);
     if (vErrors.length > 0) {
-      allErrors.push(vErrors.join("; "));
+      const error = vErrors.join("; ");
+      allErrors.push(error);
+      attemptsLog.push({ attempt: n, raw, ok: false, error });
       continue;
     }
 
+    attemptsLog.push({ attempt: n, raw, ok: true });
     return {
       decision: parsed.decision,
-      attempts: attempt + 1,
+      attempts: n,
       fellBack: false,
       errors: allErrors,
       raw,
+      attemptsLog,
     };
   }
 
@@ -83,5 +101,6 @@ export async function decide(input: DecideInput): Promise<DecideResult> {
     fellBack: true,
     errors: allErrors,
     raw: lastRaw,
+    attemptsLog,
   };
 }

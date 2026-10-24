@@ -50,6 +50,9 @@ test("falls back to none + sulk when validation fails twice", async () => {
   assert.equal(res.decision.action, "none");
   assert.equal(res.decision.narration, STOCK_SULK);
   assert.ok(res.errors.length >= 2);
+  // Both attempts are recorded with their raw text + rejection reason.
+  assert.equal(res.attemptsLog.length, 2);
+  assert.ok(res.attemptsLog.every((a) => !a.ok && a.raw === overCap && a.error));
 });
 
 test("falls back when the LLM call throws both times", async () => {

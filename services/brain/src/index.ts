@@ -67,7 +67,13 @@ function main(): void {
     log.info(
       `decision: ${result.decision.action} (attempts=${result.attempts}, fellBack=${result.fellBack})`
     );
-    if (result.errors.length) log.debug("decision errors", result.errors);
+    // Log the raw model output + rejection reason for any attempt that failed,
+    // so a fallback-to-none can be diagnosed. Logs only; never sent to Telegram.
+    for (const a of result.attemptsLog) {
+      if (a.ok) continue;
+      log.warn(`attempt ${a.attempt} rejected: ${a.error}`);
+      log.warn(`attempt ${a.attempt} raw LLM output:\n${a.raw ?? "(no response — the API call threw)"}`);
+    }
 
     // Forward in the background; still return the decision to the caller.
     void forwardToHands({ briefing: body.briefing, decision: result.decision });
