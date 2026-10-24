@@ -1,6 +1,43 @@
-node_modules/
+# ---- Secrets (NEVER commit) ----
 .env
-*.db
+.env.*
+!.env.example
+*.pem
+keypairs/
+*-keypair.json
+wallet*.json
+agent*.json
+admin*.json
+
+# ---- Node ----
+node_modules/
+dist/
+build/
+*.tsbuildinfo
+.pnpm-store/
+npm-debug.log*
+pnpm-debug.log*
+
+# ---- Rust / Anchor ----
 target/
 .anchor/
-dist/
+test-ledger/
+**/*.rs.bk
+Cargo.lock.orig
+
+# ---- SQLite (runtime DB; schema lives in db/) ----
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+db/*.db
+
+# ---- Logs / misc ----
+logs/
+*.log
+.DS_Store
+.vscode/
+.idea/
+coverage/

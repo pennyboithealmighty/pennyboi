@@ -1,0 +1,8 @@
+-- Pennyboi memory DB — SQLite schema (docs/04-agent-prompt.md).
+-- SCAFFOLD ONLY (Step 0). Build-plan Step 6 finalizes columns, indexes, and
+-- migrations. Tables (minimum set) to be implemented:
+--   wallets(wallet PK, nickname, loyalty_score, first_seen, last_seen)
+--   grudges(wallet, reason, created_ts, cleared_ts NULL)
+--   actions(id, ts, threshold_step, mood, action, params_json, reasoning,
+--           narration, tx_sig, status)
+--   offerings(id, ts, wallet, text, upvotes, chosen_bool)
