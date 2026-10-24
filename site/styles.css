@@ -325,3 +325,79 @@ h2 {
   .tp-grid { grid-template-columns: 1fr; gap: 24px; }
   .tp-actions { flex-direction: column; }
 }
+
+/* ====================== Stage 2: Scripture page =========================== */
+.nav-active { color: var(--cream) !important; border-bottom: 2px solid var(--copper); padding-bottom: 2px; }
+
+.scripture-hero { border-bottom: 1px solid var(--line); }
+.scripture-title { max-width: var(--maxw); margin: 0 auto; padding: 24px 20px 56px; }
+.scripture-title .wordmark {
+  font-family: "Anton", sans-serif;
+  font-size: clamp(3rem, 10vw, 6rem);
+  color: var(--copper);
+  line-height: 0.85;
+}
+.scripture-title .tagline { font-size: 1.1rem; font-style: italic; color: var(--copper-bright); margin-top: 14px; }
+
+.section p { max-width: 70ch; }
+.section em { color: var(--cream); font-style: italic; }
+
+.law-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 8px; }
+.law-grid h3 { font-family: "Anton", sans-serif; text-transform: uppercase; font-size: 1.3rem; margin-bottom: 12px; }
+.law-timelock { margin-top: 28px; color: var(--copper-bright); }
+.law-list { list-style: none; padding: 0; margin: 0; }
+.law-list li { color: var(--muted); padding: 7px 0 7px 22px; position: relative; }
+.law-list li::before { content: "§"; position: absolute; left: 0; color: var(--copper); font-weight: 800; }
+
+.verify { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+.verify-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 16px;
+}
+.verify-label { font-weight: 800; min-width: 130px; color: var(--cream); }
+.verify-addr {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85rem;
+  color: var(--copper-bright);
+  word-break: break-all;
+  flex: 1 1 260px;
+}
+.verify-copy {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  border-radius: 7px;
+  padding: 5px 12px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.verify-copy:hover { color: var(--cream); border-color: var(--copper); }
+.verify-scan { font-size: 0.85rem; font-weight: 700; white-space: nowrap; }
+
+.scripture-quote {
+  border-left: 3px solid var(--copper);
+  margin: 8px 0 0;
+  padding: 8px 0 8px 24px;
+  max-width: 72ch;
+}
+.scripture-quote p { color: var(--cream); margin: 0 0 16px; }
+.scripture-quote p:first-child {
+  font-family: "Anton", sans-serif;
+  letter-spacing: 0.04em;
+  font-size: 1.2rem;
+}
+
+@media (max-width: 860px) {
+  .law-grid { grid-template-columns: 1fr; gap: 28px; }
+  .verify-label { min-width: 0; }
+}
+
+/* hidden attribute must beat the flex display on verify rows */
+.verify-row[hidden] { display: none; }
