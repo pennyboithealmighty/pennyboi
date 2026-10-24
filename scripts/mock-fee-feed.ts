@@ -13,7 +13,7 @@ import {
   Transaction,
   sendAndConfirmTransaction,
 } from "@solana/web3.js";
-import { assertDevnet, loadOrCreateKeypair, log, sol } from "./lib.js";
+import { assertDevnet, ensureFunded, loadOrCreateKeypair, log, sol } from "./lib.js";
 
 async function drip(
   conn: ReturnType<typeof getConnection>,
@@ -45,14 +45,22 @@ async function main(): Promise<void> {
   const lamports = envNum("MOCK_FEE_LAMPORTS", 50_000_000); // 0.05 SOL default
   const intervalSecs = envNum("MOCK_FEE_INTERVAL_SECS", 60);
   const once = process.argv.includes("--once");
+  const dripSol = lamports / 1_000_000_000;
+
+  // One tick: keep admin funded enough to cover a drip (best-effort faucet
+  // top-up so an unattended week-long run survives), then drip.
+  const tick = async () => {
+    await ensureFunded(conn, admin.keypair.publicKey, dripSol + 0.02, 2);
+    await drip(conn, admin.keypair, feesPda, lamports);
+  };
 
   log(`fee feed -> ${feesPda.toBase58()} (${sol(lamports)} SOL${once ? ", single drip" : ` every ${intervalSecs}s`})`);
 
-  await drip(conn, admin.keypair, feesPda, lamports);
+  await tick();
   if (once) return;
 
   setInterval(() => {
-    drip(conn, admin.keypair, feesPda, lamports).catch((e) => log(`drip failed: ${e.message}`));
+    tick().catch((e) => log(`drip failed: ${e.message}`));
   }, Math.max(5, intervalSecs) * 1000);
 }
 

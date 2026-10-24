@@ -80,7 +80,12 @@ async function main(): Promise<void> {
   log(`admin balance ${sol(adminBal)} SOL, agent balance ${sol(agentBal)} SOL`);
 
   // (4) build + deploy, unless already deployed (idempotent) or forced off.
-  const deployedVault = await isDeployed(conn, admin.keypair);
+  // FORCE_DEPLOY=1 always builds/deploys (used to stand up a fresh instance:
+  // `rm -f target/deploy/vault-keypair.json target/idl/vault.json` + clear
+  // VAULT_PROGRAM_ID in .env first to get a new program id).
+  const deployedVault = envBool("FORCE_DEPLOY", false)
+    ? null
+    : await isDeployed(conn, admin.keypair);
   if (deployedVault) {
     log(`program ${deployedVault.programId.toBase58()} already deployed on devnet — skipping build/deploy.`);
   } else if (envBool("SKIP_ANCHOR_DEPLOY", false)) {

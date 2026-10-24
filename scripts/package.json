@@ -7,6 +7,10 @@
     "deploy:devnet": "tsx deploy.ts",
     "mock-fee-feed": "tsx mock-fee-feed.ts",
     "sweep": "tsx sweep.ts",
+    "sweep:loop": "tsx sweep.ts --loop",
+    "config:request": "tsx config-update.ts request",
+    "config:execute": "tsx config-update.ts execute",
+    "config:cancel": "tsx config-update.ts cancel",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
