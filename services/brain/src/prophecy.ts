@@ -23,6 +23,25 @@ export interface ProphecyInput {
   theme: string;
   daysUntilAwakening?: number | null;
   recentPosts: string[];
+  /** How to open this post: "mortals" | "congregation" | "pennies" | "none". */
+  opening?: string;
+  /** Exact phrases to avoid this time (e.g. one recently used too often). */
+  avoidPhrases?: string[];
+}
+
+function openingDirective(opening?: string): string {
+  switch (opening) {
+    case "mortals":
+      return 'Open by addressing them as "mortals."';
+    case "congregation":
+      return 'Open by addressing them as "my congregation."';
+    case "pennies":
+      return 'Open by addressing them as "my pennies."';
+    case "none":
+      return "Do NOT open with a direct address this time; begin with a declaration.";
+    default:
+      return "Vary your opening address (mortals / my congregation / my pennies / or none); do not open like your recent_posts.";
+  }
 }
 
 export interface Prophecy {
@@ -48,6 +67,11 @@ export function renderProphecyBriefing(i: ProphecyInput): string {
   lines.push("- Do NOT mention Telegram, a contract address, or a launch platform by name.");
   lines.push('- You may reference the Divine Allowance, the caps, the cooldowns, and that "the code owns everything" as LORE, not as facts about today.');
   lines.push('- Never break character. Never say "AI," "bot," "agent," or "model."');
+  lines.push(`- ${openingDirective(i.opening)}`);
+  lines.push('- Do NOT reuse the exact phrase "the code owns everything" if it appears in recent_posts; use it sparingly.');
+  if (i.avoidPhrases && i.avoidPhrases.length) {
+    lines.push(`- Do NOT use these exact phrases in this post: ${i.avoidPhrases.map((p) => `"${p}"`).join(", ")}.`);
+  }
   lines.push("");
   lines.push('Respond with ONLY a single JSON object: { "post": "<text <= 240 chars>", "theme": "<theme used>", "reasoning": "<private>" }');
   return lines.join("\n");

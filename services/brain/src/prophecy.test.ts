@@ -25,6 +25,21 @@ test("renderProphecyBriefing includes mode header, theme, and rules", () => {
   assert.match(txt, /^PROPHECY MODE/);
   assert.match(txt, /theme: taunt/);
   assert.match(txt, /Never say "AI," "bot," "agent," or "model."/);
+  // default (no opening given) -> vary-opening directive + sparing-phrase rule
+  assert.match(txt, /Vary your opening address/);
+  assert.match(txt, /Do NOT reuse the exact phrase "the code owns everything" if it appears/);
+});
+
+test("renderProphecyBriefing honors a specific opening + avoid list", () => {
+  const txt = renderProphecyBriefing({
+    mood: "petty",
+    theme: "demand",
+    recentPosts: [],
+    opening: "none",
+    avoidPhrases: ["the code owns everything"],
+  });
+  assert.match(txt, /Do NOT open with a direct address this time/);
+  assert.match(txt, /Do NOT use these exact phrases in this post: "the code owns everything"/);
 });
 
 test("generateProphecy returns a post on success", async () => {

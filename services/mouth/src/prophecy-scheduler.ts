@@ -20,6 +20,9 @@ export interface ProduceResult {
   xPostId?: string;
 }
 
+const OPENINGS = ["mortals", "congregation", "pennies", "none"] as const;
+const CODE_PHRASE = "the code owns everything";
+
 function startOfDayLocal(now = Date.now()): number {
   const d = new Date(now);
   d.setHours(0, 0, 0, 0);
@@ -37,6 +40,7 @@ function daysUntil(launchDate: string): number | null {
 export class ProphecyScheduler {
   private paused = false;
   private themeIndex = 0;
+  private openingIndex = 0;
   private todaySlots: number[] = [];
 
   constructor(private m: MouthCtx) {
@@ -77,7 +81,12 @@ export class ProphecyScheduler {
     this.m.log.info(`prophecy: planned ${upcoming.length} post(s) for today (mode=${this.m.cfg.x.mode})`);
   }
 
-  private async callBrain(theme: string, mood: string): Promise<{ post: string; theme: string } | null> {
+  private async callBrain(
+    theme: string,
+    mood: string,
+    opening: string,
+    avoidPhrases: string[]
+  ): Promise<{ post: string; theme: string } | null> {
     const recentPosts = this.m.db.recentXPosts(5).map((r) => r.text);
     try {
       const res = await fetch(this.brainProphecyUrl(), {
@@ -88,6 +97,8 @@ export class ProphecyScheduler {
           theme,
           daysUntilAwakening: daysUntil(this.m.cfg.x.prelaunch.launchDate),
           recentPosts,
+          opening,
+          avoidPhrases,
         }),
       });
       const data = (await res.json()) as { prophecy?: { post: string; theme: string } | null };
@@ -104,8 +115,20 @@ export class ProphecyScheduler {
     const mood = pickMood();
     const hasLaunch = daysUntil(this.m.cfg.x.prelaunch.launchDate) !== null;
     const theme = themeAt(this.themeIndex++, hasLaunch);
+    const opening = OPENINGS[this.openingIndex++ % OPENINGS.length]!;
 
-    const prophecy = await this.callBrain(theme, mood);
+    // Keep "the code owns everything" to at most once per 5 posts: if it appeared
+    // in the last 4 posted ones, tell Brain to avoid it this time.
+    const recentPosted = this.m.db
+      .recentXPosts(10)
+      .filter((r) => r.status === "posted")
+      .slice(0, 4)
+      .map((r) => r.text);
+    const avoidPhrases = recentPosted.some((t) => t.toLowerCase().includes(CODE_PHRASE))
+      ? [CODE_PHRASE]
+      : [];
+
+    const prophecy = await this.callBrain(theme, mood, opening, avoidPhrases);
     if (!prophecy) {
       if (!dryrun) this.m.db.recordXPost({ now, theme, mood, text: "", status: "skipped" });
       return { status: "skipped", theme };
