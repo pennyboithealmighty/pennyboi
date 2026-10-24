@@ -15,7 +15,7 @@ window.PENNYBOI_CONFIG = {
   CONTRACT_ADDRESS: null, // the mint; shown only once set. "Any other address is a false idol."
   TELEGRAM_URL: "https://t.me/pennyboialmighty",
   X_URL: "https://x.com/Pennyboi_Sol",
-  GITHUB_URL: null,
+  GITHUB_URL: "https://github.com/pennyboithealmighty/pennyboi",
 
   // Countdown. ISO date (e.g. "2026-11-01T00:00:00Z") or null.
   LAUNCH_DATE: null,
