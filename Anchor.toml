@@ -25,6 +25,11 @@ wallet = "~/.config/solana/id.json"
 bind_address = "127.0.0.1"
 
 [scripts]
-test = "pnpm --filter @pennyboi/tests test"
+# `anchor test` runs this from the repo root (where Anchor.toml lives), so
+# anchor.workspace can find it. Invoke ts-mocha directly rather than via
+# `pnpm --filter`, which would re-root the cwd into tests/ and break the
+# Anchor.toml lookup. Paths are relative to the repo root; the test file's own
+# `../target/...` imports still resolve from tests/.
+test = "tests/node_modules/.bin/ts-mocha -p tests/tsconfig.json -t 1000000 'tests/vault.ts'"
 
 [hooks]
