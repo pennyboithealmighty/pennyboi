@@ -4,6 +4,7 @@
 // a chain.
 
 import type { VaultConfig } from "@pennyboi/shared";
+import type { AirdropResolution, AirdropResolved } from "./airdrop-resolve.js";
 import { validateOnchain } from "./validate.js";
 import type { Decision, ExecResult } from "./types.js";
 
@@ -13,6 +14,10 @@ export interface ExecDeps {
   isPaused: () => boolean;
   solscan: (sig: string) => string;
   nowSecs?: () => number;
+  // Airdrop only (docs/11): turn `favored` into concrete recipients + amounts
+  // from the recorded pool snapshot, and record the round once it lands.
+  resolveAirdrop?: (d: Decision, cfg: VaultConfig) => AirdropResolution;
+  onAirdropResult?: (resolved: AirdropResolved, signature: string) => void;
 }
 
 export async function executeDecision(d: Decision, deps: ExecDeps): Promise<ExecResult> {
@@ -34,20 +39,34 @@ export async function executeDecision(d: Decision, deps: ExecDeps): Promise<Exec
     return { status: "failed", action: d.action, error: `config read failed: ${(e as Error).message}` };
   }
 
-  const errs = validateOnchain(d, cfg, now);
+  // Airdrop: resolve `favored` into recipients + amounts from the recorded pool
+  // snapshot + seed before re-validating and submitting.
+  let exec = d;
+  let airdrop: AirdropResolved | undefined;
+  if (d.action === "airdrop" && deps.resolveAirdrop) {
+    const r = deps.resolveAirdrop(d, cfg);
+    if (!r.ok) {
+      return { status: "invalid", action: "airdrop", error: r.error };
+    }
+    airdrop = r.resolved;
+    exec = { ...d, params: { ...d.params, recipients: r.resolved.recipients, amounts: r.resolved.amounts } };
+  }
+
+  const errs = validateOnchain(exec, cfg, now);
   if (errs.length > 0) {
-    return { status: "invalid", action: d.action, error: errs.join("; ") };
+    return { status: "invalid", action: exec.action, error: errs.join("; ") };
   }
 
   try {
-    const signature = await deps.submit(d);
+    const signature = await deps.submit(exec);
+    if (airdrop && deps.onAirdropResult) deps.onAirdropResult(airdrop, signature);
     return {
       status: "submitted",
-      action: d.action,
+      action: exec.action,
       signature,
       solscanUrl: deps.solscan(signature),
     };
   } catch (e) {
-    return { status: "failed", action: d.action, error: (e as Error).message };
+    return { status: "failed", action: exec.action, error: (e as Error).message };
   }
 }

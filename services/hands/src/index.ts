@@ -9,11 +9,14 @@ import {
   envStr,
   fetchVaultConfig,
   getConnection,
+  MemoryDb,
   tryLoadVault,
+  type Briefing,
   type LoadedVault,
 } from "@pennyboi/shared";
 import type { Commitment } from "@solana/web3.js";
 import express, { type Request, type Response } from "express";
+import { resolveAirdrop } from "./airdrop-resolve.js";
 import { executeDecision, type ExecDeps } from "./execute.js";
 import { loadAgentKeypair } from "./keypair.js";
 import { log } from "./log.js";
@@ -55,6 +58,8 @@ async function forwardToMouth(payload: unknown): Promise<void> {
 function main(): void {
   const port = envNum("HANDS_PORT", 8789);
   const commitment = envStr("TX_COMMITMENT", "confirmed") as Commitment;
+  // Shared memory DB — read the airdrop pool snapshot Eyes stored, record rounds.
+  const db = new MemoryDb(envStr("DATABASE_PATH", "./db/pennyboi.db"));
 
   const app = express();
   app.use(express.json({ limit: "1mb" }));
@@ -81,18 +86,39 @@ function main(): void {
       chain = null as never;
     }
 
+    const briefing = body.briefing as Briefing | undefined;
+    let airdropRound: unknown;
     const deps: ExecDeps = {
       getConfig: () => fetchVaultConfig(chain.vault.program, chain.vault.configPda),
       submit: (d) => chain.submit(d),
       isPaused,
       solscan: solscanTx,
+      resolveAirdrop: (d, cfg) => resolveAirdrop(d, briefing, cfg, db),
+      onAirdropResult: (resolved, signature) => {
+        db.recordAirdropResult({
+          step: resolved.step,
+          favored: resolved.favored,
+          fortune: resolved.fortune,
+          amountEach: resolved.amountEach,
+          txSig: signature,
+        });
+        airdropRound = {
+          step: resolved.step,
+          pool_size: resolved.poolSize,
+          seed: resolved.seed,
+          favored: resolved.favored,
+          fortune: resolved.fortune,
+          amount_each: resolved.amountEach,
+        };
+      },
     };
 
     const result = await executeDecision(decision, deps);
     log.info(`execute ${decision.action} -> ${result.status}`, result.signature ?? result.error ?? "");
 
-    // Pass the briefing through so Mouth can extract nickname/grudge memory.
-    void forwardToMouth({ decision, result, briefing: body.briefing, narration: decision.narration });
+    // Pass the briefing + any airdrop round through so Mouth can extract memory
+    // and narrate the blessing (pool size, seed) later.
+    void forwardToMouth({ decision, result, briefing: body.briefing, narration: decision.narration, airdrop: airdropRound });
     res.json({ ok: result.status !== "failed", result });
   });
 
