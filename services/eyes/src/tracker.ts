@@ -6,10 +6,11 @@ import {
   fetchVaultConfig,
   lamportsToSol,
   type LoadedVault,
+  type MemoryDb,
 } from "@pennyboi/shared";
 import type { Connection } from "@solana/web3.js";
 import type { ActivityWindow } from "./activity.js";
-import { buildBriefing } from "./briefing-builder.js";
+import { buildBriefing, type BuildOpts } from "./briefing-builder.js";
 import type { BriefingHandler } from "./handoff.js";
 import type { Logger } from "./log.js";
 
@@ -17,6 +18,7 @@ export interface TrackerDeps {
   vault: LoadedVault | null;
   connection: Connection;
   activity: ActivityWindow;
+  db: MemoryDb | null;
   onBrief: BriefingHandler;
   log: Logger;
 }
@@ -27,6 +29,35 @@ export class ThresholdTracker {
   private warnedNoVault = false;
 
   constructor(private deps: TrackerDeps) {}
+
+  /** Pull the memory-backed sections of the briefing from the shared DB. */
+  private memoryOpts(): BuildOpts {
+    const db = this.deps.db;
+    if (!db) return {};
+    return {
+      offerings: db.topOpenOfferings(5).map((o) => ({
+        id: o.id,
+        wallet: o.wallet,
+        text: o.text,
+        upvotes: o.upvotes,
+      })),
+      grudges: db.listGrudges(10).map((g) => ({
+        wallet: g.wallet,
+        nickname: g.nickname ?? undefined,
+        reason: g.reason,
+      })),
+      loyal: db.listLoyal(10).map((l) => ({
+        wallet: l.wallet,
+        nickname: l.nickname ?? undefined,
+        reason: l.reason,
+      })),
+      lastActions: db.lastActions(3).map((a) => ({
+        ts: a.ts,
+        action: a.action,
+        summary: a.narration ?? "",
+      })),
+    };
+  }
 
   /** Re-read chain state and brief if a new threshold is pending a decision. */
   async check(): Promise<void> {
@@ -47,7 +78,7 @@ export class ThresholdTracker {
       if (cfg.actionAvailable && cfg.thresholdStep !== this.lastBriefedStep) {
         const lamports = await connection.getBalance(vault.treasuryPda);
         const nowSecs = Math.floor(Date.now() / 1000);
-        const briefing = buildBriefing(cfg, lamportsToSol(lamports), activity, nowSecs);
+        const briefing = buildBriefing(cfg, lamportsToSol(lamports), activity, nowSecs, this.memoryOpts());
         await onBrief(briefing);
         activity.reset();
         this.lastBriefedStep = cfg.thresholdStep;

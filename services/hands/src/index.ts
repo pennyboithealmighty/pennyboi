@@ -91,7 +91,8 @@ function main(): void {
     const result = await executeDecision(decision, deps);
     log.info(`execute ${decision.action} -> ${result.status}`, result.signature ?? result.error ?? "");
 
-    void forwardToMouth({ decision, result, narration: decision.narration });
+    // Pass the briefing through so Mouth can extract nickname/grudge memory.
+    void forwardToMouth({ decision, result, briefing: body.briefing, narration: decision.narration });
     res.json({ ok: result.status !== "failed", result });
   });
 

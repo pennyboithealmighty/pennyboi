@@ -3,7 +3,7 @@
 // the polling fallback when no Helius key is present. On any threshold crossing
 // it builds the situation briefing and hands it to the Brain.
 
-import { envNum, envStr, getConnection, tryLoadVault } from "@pennyboi/shared";
+import { envNum, envStr, getConnection, MemoryDb, tryLoadVault } from "@pennyboi/shared";
 import { ActivityWindow } from "./activity.js";
 import { makeHandoff } from "./handoff.js";
 import { log } from "./log.js";
@@ -29,7 +29,15 @@ function main(): void {
 
   const activity = new ActivityWindow();
   const onBrief = makeHandoff(log);
-  const tracker = new ThresholdTracker({ vault, connection, activity, onBrief, log });
+
+  let db: MemoryDb | null = null;
+  try {
+    db = new MemoryDb(envStr("DATABASE_PATH", "./db/pennyboi.db"));
+  } catch (e) {
+    log.warn("could not open memory DB — briefings will omit offerings/grudges/loyal", e);
+  }
+
+  const tracker = new ThresholdTracker({ vault, connection, activity, db, onBrief, log });
 
   const app = createServer({ secret, mint, activity, tracker, log });
   app.listen(port, () => {

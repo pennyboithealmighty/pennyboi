@@ -31,6 +31,11 @@ export interface MouthConfig {
   };
 }
 
+/** General topic -> undefined (post to root). Real topics are >1. */
+function generalTopic(v: number): number | undefined {
+  return v > 1 ? v : undefined;
+}
+
 function hostOf(url: string): string | null {
   try {
     return new URL(url).host.toLowerCase();
@@ -60,7 +65,10 @@ export function loadMouthConfig(): MouthConfig {
     ownerId: envNum("TELEGRAM_OWNER_ID", 0),
     chatId: envNum("TELEGRAM_CHAT_ID", 0),
     topics: {
-      general: envNum("TELEGRAM_TOPIC_GENERAL", 0) || undefined,
+      // In a forum supergroup the General topic IS the root: messages post with
+      // NO message_thread_id. /ids reports no thread for General, so 0 or 1 both
+      // mean "root" here -> undefined -> posts land in General correctly.
+      general: generalTopic(envNum("TELEGRAM_TOPIC_GENERAL", 0)),
       offerings: envNum("TELEGRAM_TOPIC_OFFERINGS", 0) || undefined,
       scripture: envNum("TELEGRAM_TOPIC_SCRIPTURE", 0) || undefined,
     },

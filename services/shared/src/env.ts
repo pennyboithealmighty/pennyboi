@@ -4,7 +4,7 @@
 
 import { config as loadDotenv } from "dotenv";
 import { existsSync, readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, isAbsolute, join } from "node:path";
 
 let loaded = false;
 
@@ -31,6 +31,15 @@ export function loadEnv(): void {
 
 export function repoRoot(): string {
   return findRepoRoot(process.cwd());
+}
+
+/**
+ * Resolve a possibly-relative path against the repo root, so services started
+ * from their own package directory (e.g. `pnpm --filter … start`) all agree on
+ * the same file — notably the shared SQLite DATABASE_PATH.
+ */
+export function resolveFromRoot(p: string): string {
+  return isAbsolute(p) ? p : join(repoRoot(), p);
 }
 
 /** Required string env var; throws if missing/empty. */

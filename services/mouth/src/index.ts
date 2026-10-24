@@ -3,12 +3,12 @@
 // holder + owner commands, hidden /ids, daily sermon) and a small HTTP server
 // for Hands -> Mouth narration (docs/06, docs/07).
 
+import { MemoryDb } from "@pennyboi/shared";
 import { Bot } from "grammy";
 import { ChainReader } from "./chain.js";
 import { registerCommands } from "./commands.js";
 import { loadMouthConfig } from "./config.js";
 import { startDailySchedule } from "./daily.js";
-import { MouthDb } from "./db.js";
 import type { MouthCtx } from "./deps.js";
 import { log } from "./log.js";
 import { registerModeration } from "./moderation.js";
@@ -26,7 +26,7 @@ async function main(): Promise<void> {
   if (!cfg.chatId) log.warn("TELEGRAM_CHAT_ID not set — moderation/announcements limited until set.");
   if (!cfg.topics.general) log.warn("Topic IDs not set — run the hidden /ids command in each topic, then fill .env.");
 
-  const db = new MouthDb(cfg.dbPath);
+  const db = new MemoryDb(cfg.dbPath);
   const bot = new Bot(cfg.botToken);
   const rate = new ReplyRateLimiter(cfg.replyRateSecs);
 

@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { rankOfferings, type OfferingRecord } from "./offerings.js";
+import { rankOfferings, type OfferingDbRow } from "@pennyboi/shared";
 
-function row(id: number, upvotes: number, ts: number): OfferingRecord {
+function row(id: number, upvotes: number, ts: number): OfferingDbRow {
   return { id, upvotes, ts, wallet: `u${id}`, text: `offer ${id}`, chosen: 0 };
 }
 
@@ -11,7 +11,7 @@ test("ranks by upvotes desc, ties by earliest ts", () => {
   const top = rankOfferings(rows, 3);
   assert.deepEqual(
     top.map((r) => r.id),
-    [3, 2, 1] // 5@150 before 5@200, then 3
+    [3, 2, 1]
   );
 });
 

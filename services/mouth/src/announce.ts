@@ -40,14 +40,6 @@ export async function announce(ctx: MouthCtx, a: AnnounceInput): Promise<void> {
 
   await sendSafe(ctx, text, { threadId: ctx.cfg.topics.general });
 
-  ctx.db.recordAction({
-    now: Math.floor(Date.now() / 1000),
-    action: a.action,
-    status: a.status,
-    narration: a.narration,
-    txSig: a.signature,
-  });
-
   // Mirror to X (narration + link). sendSafe's filter is Telegram-only; Solscan
   // is on the allowlist and X links are fine, so post the same text.
   await ctx.x.post(a.solscanUrl ? `${a.narration}\n${a.solscanUrl}` : a.narration);
