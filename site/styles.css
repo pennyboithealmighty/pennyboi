@@ -38,8 +38,24 @@ h1, h2, h3 { line-height: 1.05; margin: 0; }
   margin: 0 auto;
   padding: 88px 20px;
 }
-.section-alt { background: var(--bg-2); max-width: none; }
-.section-alt > * { max-width: var(--maxw); margin-left: auto; margin-right: auto; }
+/* Full-bleed background, but content tracks the same max-width container as
+   .section — centered via padding so children stay left-aligned (not per-child
+   margins, which mis-center narrower blocks like the lede). */
+.section-alt,
+.treasury-panel {
+  max-width: none;
+  /* +20px because box-sizing:border-box makes .section's max-width include its
+     20px padding, so its content is inset that much — match it exactly. */
+  padding-left: max(20px, calc((100% - var(--maxw)) / 2 + 20px));
+  padding-right: max(20px, calc((100% - var(--maxw)) / 2 + 20px));
+}
+.section-alt > *,
+.treasury-panel > * {
+  max-width: none;
+  margin-left: 0;
+  margin-right: 0;
+}
+.section-alt { background: var(--bg-2); }
 
 h2 {
   font-family: "Anton", Impact, sans-serif;
@@ -266,11 +282,9 @@ h2 {
 
 .treasury-panel {
   background: var(--bg-2);
-  max-width: none;
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
 }
-.treasury-panel > * { max-width: var(--maxw); margin-left: auto; margin-right: auto; }
 
 .tp-grid {
   display: grid;
