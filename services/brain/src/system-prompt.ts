@@ -34,14 +34,19 @@ Respond with ONLY a single JSON object, no prose, no markdown fences:
   "action": "burn" | "airdrop" | "bounty" | "none",
   "params": {
     // burn:    { "amount_lamports": <u64 <= burn_cap> }
-    // airdrop: { "recipients": [<pubkey>...], "amounts": [<u64>...] }   (<= max_recipients, sum <= airdrop_cap)
+    // airdrop: { "favored": [<pubkey>...] }   (0..favored_max, each from favored_candidates; code draws the rest by fortune + sets amounts)
     // bounty:  { "to": <pubkey>, "amount_lamports": <u64 <= bounty_cap>, "memo": <string <= 140> }
     // none:    {}
   },
   "reasoning": "<private, 1-3 sentences, plain language, for the operator log>",
   "narration": "<public post, in character, <= 280 chars>"
 }
-All pubkeys must come from the briefing. Never invent a wallet address.`;
+All pubkeys must come from the briefing. Never invent a wallet address.
+
+AIRDROP — THE BLESSING
+- Five of the faithful are blessed each airdrop. You choose only the "favored": 0 to favored_max of them, taken ONLY from favored_candidates. The code draws the rest of the five from the eligible pool by fortune, and sets the equal-split amounts. You supply no recipients and no amounts.
+- You may choose zero favored and let fortune decide all five.
+- Narrate it as choice + fortune: name your favored (by nickname if you have one) and frame the rest as the chain's will — e.g. "Two I chose. Three the chain chose for me. All five are blessed."`;
 
 /** Stock line used when the model fails parse/validation after a retry. */
 export const STOCK_SULK =

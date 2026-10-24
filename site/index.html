@@ -50,6 +50,7 @@
           <span>PENNYBOI</span>
         </a>
         <div class="nav-links">
+          <a href="#explainer">Watch the 60-second explainer</a>
           <a href="#loop">The Loop</a>
           <a href="#allowance">The Allowance</a>
           <a href="#harmless">Harmless by design</a>
@@ -101,6 +102,30 @@
         </figure>
       </div>
     </header>
+
+    <!-- ================= EXPLAINER VIDEO ================= -->
+    <section class="section explainer" id="explainer">
+      <div class="explainer-wrap">
+        <video
+          id="explainer-video"
+          class="explainer-video"
+          poster="assets/poster.jpg"
+          muted
+          autoplay
+          loop
+          playsinline
+          controls
+          preload="metadata"
+        >
+          <source src="assets/pennyboi-explained.mp4" type="video/mp4" />
+          Your browser can't play this video.
+          <a href="assets/pennyboi-explained.mp4">Download the 60-second explainer</a>.
+        </video>
+        <button id="explainer-sound" class="explainer-sound" type="button" aria-label="Tap for sound">
+          🔊 Tap for sound
+        </button>
+      </div>
+    </section>
 
     <!-- ================= LIVE TREASURY (Stage 1) ================= -->
     <section class="section treasury-panel" id="tp-panel" aria-live="polite">
@@ -272,5 +297,6 @@
     <script src="treasury.js?v=DEV"></script>
     <script src="home-data.js?v=DEV"></script>
     <script src="launch.js?v=DEV"></script>
+    <script src="explainer.js?v=DEV"></script>
   </body>
 </html>

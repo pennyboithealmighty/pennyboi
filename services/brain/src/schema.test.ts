@@ -53,43 +53,40 @@ test("validateDecision: action not in available_actions", () => {
   assert.ok(errs.some((e) => e.includes("not in available_actions")));
 });
 
-test("validateDecision: airdrop recipient must come from the briefing", () => {
+test("validateDecision: airdrop favored must be a candidate (zero favored is fine)", () => {
   const b = makeBriefing();
-  const good = validateDecision(
-    {
-      action: "airdrop",
-      params: { recipients: [BUYER], amounts: [10_000_000] },
-      reasoning: "",
-      narration: "bless",
-    },
-    b
+  // BUYER is the lone favored_candidate in the fixture.
+  assert.deepEqual(
+    validateDecision(
+      { action: "airdrop", params: { favored: [BUYER] }, reasoning: "", narration: "bless" },
+      b
+    ),
+    []
   );
-  assert.deepEqual(good, []);
-
+  // Zero favored (let fortune decide all five) is valid.
+  assert.deepEqual(
+    validateDecision(
+      { action: "airdrop", params: { favored: [] }, reasoning: "", narration: "bless" },
+      b
+    ),
+    []
+  );
+  // SELLER is in the pool-less briefing but NOT a favored_candidate.
   const bad = validateDecision(
-    {
-      action: "airdrop",
-      params: { recipients: ["1111111111111111111111111111111111"], amounts: [10_000_000] },
-      reasoning: "",
-      narration: "bless",
-    },
+    { action: "airdrop", params: { favored: [SELLER] }, reasoning: "", narration: "bless" },
     b
   );
-  assert.ok(bad.some((e) => e.includes("not from the briefing")));
+  assert.ok(bad.some((e) => e.includes("not in favored_candidates")));
 });
 
-test("validateDecision: airdrop total over cap", () => {
+test("validateDecision: airdrop rejects too many favored and duplicates", () => {
   const b = makeBriefing();
-  const errs = validateDecision(
-    {
-      action: "airdrop",
-      params: { recipients: [BUYER, SELLER], amounts: [60_000_000, 60_000_000] },
-      reasoning: "",
-      narration: "bless",
-    },
+  const tooMany = validateDecision(
+    { action: "airdrop", params: { favored: [BUYER, BUYER, BUYER] }, reasoning: "", narration: "bless" },
     b
   );
-  assert.ok(errs.some((e) => e.includes("exceeds cap")));
+  assert.ok(tooMany.some((e) => e.includes("max 2")));
+  assert.ok(tooMany.some((e) => e.includes("duplicated")));
 });
 
 test("validateDecision: bounty valid + memo too long", () => {

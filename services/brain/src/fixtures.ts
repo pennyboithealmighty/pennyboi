@@ -11,7 +11,16 @@ export function makeBriefing(over: Partial<Briefing> = {}): Briefing {
     treasury: { balance_sol: 2.5, threshold_step: 1, actions_banked: 3 },
     available_actions: {
       burn: { cap_lamports: 100_000_000 },
-      airdrop: { cap_lamports: 100_000_000, max_recipients: 20 },
+      airdrop: {
+        cap_lamports: 100_000_000,
+        max_recipients: 5,
+        recipients: 5,
+        favored_max: 2,
+        pool_size: 3,
+        favored_candidates: [
+          { wallet: BUYER, nickname: "THE FAITHFUL", reason: "loyal", held_hours: 48, balance_tokens: 500_000 },
+        ],
+      },
       bounty: { cap_lamports: 50_000_000 },
     },
     since_last_threshold: {

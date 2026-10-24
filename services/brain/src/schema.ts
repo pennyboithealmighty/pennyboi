@@ -118,40 +118,32 @@ export function validateDecision(d: Decision, b: Briefing): string[] {
         errs.push(`"airdrop" is not in available_actions`);
         break;
       }
-      const recips = d.params.recipients;
-      const amounts = d.params.amounts;
-      if (!Array.isArray(recips) || !Array.isArray(amounts)) {
-        errs.push(`airdrop requires "recipients" and "amounts" arrays`);
+      // docs/11 §3: the model only picks `favored` (0..favored_max) from
+      // `favored_candidates`. Code draws the rest of the pool by fortune and
+      // sets the amounts — the model supplies no recipients/amounts.
+      const favored = d.params.favored ?? [];
+      if (!Array.isArray(favored)) {
+        errs.push(`airdrop.favored must be an array of pubkeys (may be empty)`);
         break;
       }
-      if (recips.length !== amounts.length) {
-        errs.push(`airdrop recipients/amounts length mismatch`);
+      const favoredMax = avail.airdrop.favored_max ?? 0;
+      if (favored.length > favoredMax) {
+        errs.push(`airdrop has ${favored.length} favored (max ${favoredMax})`);
       }
-      if (recips.length === 0) {
-        errs.push(`airdrop has no recipients`);
-      }
-      if (recips.length > avail.airdrop.max_recipients) {
-        errs.push(
-          `airdrop has ${recips.length} recipients (max ${avail.airdrop.max_recipients})`
-        );
-      }
-      for (const r of recips) {
-        if (typeof r !== "string" || !PUBKEY_RE.test(r)) {
-          errs.push(`airdrop recipient "${String(r)}" is not a valid pubkey`);
-        } else if (!allowed.has(r)) {
-          errs.push(`airdrop recipient "${r}" is not from the briefing`);
+      const candidates = new Set((avail.airdrop.favored_candidates ?? []).map((c) => c.wallet));
+      const seen = new Set<string>();
+      for (const w of favored) {
+        if (typeof w !== "string" || !PUBKEY_RE.test(w)) {
+          errs.push(`airdrop favored "${String(w)}" is not a valid pubkey`);
+          continue;
         }
-      }
-      let sum = 0;
-      for (const a of amounts) {
-        if (!isPositiveInt(a)) {
-          errs.push(`airdrop amount "${String(a)}" must be a positive integer`);
-        } else {
-          sum += a;
+        if (!candidates.has(w)) {
+          errs.push(`airdrop favored "${w}" is not in favored_candidates`);
         }
-      }
-      if (sum > avail.airdrop.cap_lamports) {
-        errs.push(`airdrop total ${sum} exceeds cap ${avail.airdrop.cap_lamports}`);
+        if (seen.has(w)) {
+          errs.push(`airdrop favored "${w}" is duplicated`);
+        }
+        seen.add(w);
       }
       break;
     }
