@@ -53,6 +53,8 @@ const pageChecks: Array<{ path: string; markers: string[] }> = [
       'id="countdown"',
       'id="contract-block"',
       'href="scripture.html"', // nav link
+      'href="whitepaper.pdf"', // whitepaper link
+      "Read the Whitepaper", // hero CTA
       'property="og:image"',
       'name="twitter:card"',
     ],
@@ -68,6 +70,7 @@ const pageChecks: Array<{ path: string; markers: string[] }> = [
       'id="verify"',
       "The Pinned Scripture",
       "HEAR ME, CONGREGATION",
+      'href="whitepaper.pdf"',
       'property="og:image"',
     ],
   },
@@ -106,7 +109,7 @@ async function main() {
       }
     }
 
-    for (const f of ["/favicon-32.png", "/favicon-180.png", "/vault-idl.json"]) {
+    for (const f of ["/favicon-32.png", "/favicon-180.png", "/vault-idl.json", "/whitepaper.pdf"]) {
       const r = await fetch(base + f);
       if (r.status !== 200) {
         failed++;
