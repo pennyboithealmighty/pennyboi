@@ -1,15 +1,20 @@
 # Pennyboi the Almighty
 
-A sandbox meme-coin experiment on Solana: a fee-powered, autonomous, AI-driven
-loop with a tiny deity character and a hard-capped on-chain allowance.
+A self-running meme coin on Solana: a fee-powered, autonomous, AI-driven loop
+with a deity character and a hard-capped on-chain allowance. The rules live
+on-chain, the treasury has no private key, and the loop is automated — it runs
+itself, no team at the wheel.
 
-> Status: **sandbox / for fun, devnet only.** Not associated with any other
-> project. No profit motive. See `docs/01-concept.md`.
+> Status: **runs itself, devnet only** — rules on-chain, treasury has no key,
+> loop automated. Not associated with any other project. No utility and no
+> promise of returns; nothing here is financial advice. See `docs/01-concept.md`.
 
 **The story:** _"The code is the law. The AI is just the mouth."_ Pennyboi is a
-toddler god with delusions of grandeur and a locked allowance — the **Divine
-Allowance**. He can only ever touch a few hundredths of a SOL at a time, and an
-on-chain program enforces that regardless of what the AI (or anyone) tries.
+self-styled god of destiny with a monumental, ceiling-less self-image — and a
+locked, hard-capped allowance, the **Divine Allowance**. He can only ever touch a
+few hundredths of a SOL at a time, and an on-chain program enforces that no matter
+what the AI (or anyone) tries. The joke is the gap: he wields 0.1 SOL like a
+thunderbolt and names the tiny amounts with total gravity — never self-pity.
 
 ---
 

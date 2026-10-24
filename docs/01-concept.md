@@ -2,11 +2,11 @@
 
 October 23, 2026
 
-Status: Sandbox / for fun. NOT associated with Sentrum Ten LLC, TSE-X, Door2Dump, or any real project. No profit motive.
+Status: Runs itself — rules on-chain, the treasury has no private key, the loop is automated. Devnet only until launch is announced. NOT associated with Sentrum Ten LLC, TSE-X, Door2Dump, or any real project. No utility and no promise of returns; nothing here is financial advice.
 
 ## 1. Goal
 
-- Understand what drives people in meme coins by building one as an experiment.
+- A self-running meme coin: the rules live on-chain, the treasury has no private key, and the loop is automated — no team steers it.
 - Launch on Pump.fun (Solana).
 - Try something "out the box": a fee-powered, autonomous, AI-driven loop that the community interacts with and that "brings itself up" on its own.
 
