@@ -5,6 +5,7 @@
 import {
   computeAvailableActions,
   pickMood,
+  type AvailableActions,
   type Briefing,
   type GrudgeRow,
   type LoyalRow,
@@ -22,6 +23,10 @@ export interface BuildOpts {
   grudges?: GrudgeRow[];
   loyal?: LoyalRow[];
   rng?: () => number;
+  // Airdrop pool enrichment (docs/11), only when airdrop is off cooldown:
+  //   object -> use this enriched airdrop entry; null -> omit airdrop (empty
+  //   pool); undefined -> leave the plain cooldown entry as-is.
+  airdrop?: AvailableActions["airdrop"] | null;
 }
 
 export function buildBriefing(
@@ -31,6 +36,13 @@ export function buildBriefing(
   nowSecs: number,
   opts: BuildOpts = {}
 ): Briefing {
+  const available = computeAvailableActions(cfg, nowSecs);
+  // Replace the plain airdrop entry with the enriched pool (or drop it if the
+  // pool came back empty). Only applies when airdrop is off cooldown.
+  if (available.airdrop && opts.airdrop !== undefined) {
+    if (opts.airdrop === null) delete available.airdrop;
+    else available.airdrop = opts.airdrop;
+  }
   return {
     mood: opts.mood ?? pickMood(opts.rng),
     treasury: {
@@ -38,7 +50,7 @@ export function buildBriefing(
       threshold_step: cfg.thresholdStep,
       actions_banked: cfg.actionsAvailable,
     },
-    available_actions: computeAvailableActions(cfg, nowSecs),
+    available_actions: available,
     since_last_threshold: {
       top_new_buyers: activity.topBuyers(5),
       biggest_sellers: activity.topSellers(5),

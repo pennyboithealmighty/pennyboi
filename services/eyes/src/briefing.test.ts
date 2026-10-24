@@ -59,6 +59,30 @@ test("builder pulls top buyers/sellers and volume from activity", () => {
   assert.equal(b.since_last_threshold.holder_count_change, 1); // 2 buyers - 1 seller
 });
 
+test("airdrop pool enrichment: object is used, null omits airdrop", () => {
+  const activity = new ActivityWindow();
+  const cfg = fakeConfig({ lastAirdropTs: 0, airdropCooldownSecs: 0 }); // airdrop off cooldown
+  const enriched = {
+    cap_lamports: 100_000_000,
+    max_recipients: 5,
+    recipients: 5,
+    favored_max: 2,
+    pool_size: 3,
+    favored_candidates: [{ wallet: "WPOOL", held_hours: 12, balance_tokens: 500_000 }],
+  };
+  const b = buildBriefing(cfg, 4.2, activity, 1000, { mood: "greedy", airdrop: enriched });
+  assert.ok(b.available_actions.airdrop, "airdrop present when off cooldown");
+  assert.equal(b.available_actions.airdrop!.pool_size, 3);
+
+  const text = renderBriefing(b);
+  assert.match(text, /airdrop: \{ cap_lamports: 100000000, recipients: 5, favored_max: 2, pool_size: 3 \}/);
+  assert.match(text, /favored_candidates:/);
+  assert.match(text, /"wallet":"WPOOL"/);
+
+  const omitted = buildBriefing(cfg, 4.2, activity, 1000, { airdrop: null });
+  assert.equal(omitted.available_actions.airdrop, undefined, "empty pool -> airdrop omitted");
+});
+
 test("renderBriefing produces the expected header and sections", () => {
   const activity = new ActivityWindow();
   const b = buildBriefing(fakeConfig(), 4.2, activity, 1000, { mood: "bored" });

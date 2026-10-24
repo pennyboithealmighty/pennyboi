@@ -91,9 +91,18 @@ export function renderBriefing(b: Briefing): string {
     lines.push(`  burn:    { cap_lamports: ${b.available_actions.burn.cap_lamports} }`);
   }
   if (b.available_actions.airdrop) {
-    lines.push(
-      `  airdrop: { cap_lamports: ${b.available_actions.airdrop.cap_lamports}, max_recipients: ${b.available_actions.airdrop.max_recipients} }`
-    );
+    const a = b.available_actions.airdrop;
+    if (a.pool_size !== undefined) {
+      lines.push(
+        `  airdrop: { cap_lamports: ${a.cap_lamports}, recipients: ${a.recipients}, favored_max: ${a.favored_max}, pool_size: ${a.pool_size} }`
+      );
+      lines.push("    favored_candidates:   (pick 0..favored_max of these as \"favored\"; code draws the rest)");
+      for (const c of a.favored_candidates ?? []) {
+        lines.push(`      - ${JSON.stringify(c)}`);
+      }
+    } else {
+      lines.push(`  airdrop: { cap_lamports: ${a.cap_lamports}, max_recipients: ${a.max_recipients} }`);
+    }
   }
   if (b.available_actions.bounty) {
     lines.push(`  bounty:  { cap_lamports: ${b.available_actions.bounty.cap_lamports} }`);

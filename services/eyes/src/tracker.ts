@@ -7,11 +7,13 @@ import {
   envNum,
   fetchVaultConfig,
   lamportsToSol,
+  type AvailableActions,
   type LoadedVault,
   type MemoryDb,
 } from "@pennyboi/shared";
 import type { Connection } from "@solana/web3.js";
 import type { ActivityWindow } from "./activity.js";
+import { buildAirdropPool } from "./airdrop-pool.js";
 import { buildBriefing, type BuildOpts } from "./briefing-builder.js";
 import type { BriefingHandler } from "./handoff.js";
 import type { Logger } from "./log.js";
@@ -83,11 +85,38 @@ export class ThresholdTracker {
       // Brief when he has banked acts AND at least one menu action is off
       // cooldown (something is actually spendable), throttled so a standing
       // backlog or a backlog stuck behind cooldowns doesn't re-brief every poll.
-      const offCooldown = Object.keys(computeAvailableActions(cfg, nowSecs)).length > 0;
+      const cooldownActions = computeAvailableActions(cfg, nowSecs);
+      const offCooldown = Object.keys(cooldownActions).length > 0;
       const throttled = Date.now() - this.lastBriefAt < this.minBriefMs;
       if (cfg.actionsAvailable > 0 && offCooldown && !throttled) {
         const lamports = await connection.getBalance(vault.treasuryPda);
-        const briefing = buildBriefing(cfg, lamportsToSol(lamports), activity, nowSecs, this.memoryOpts());
+
+        // If airdrop is off cooldown, build the eligible pool (docs/11): this
+        // records the snapshot + seed and enriches the briefing, or omits
+        // airdrop when nobody qualifies.
+        let airdrop: AvailableActions["airdrop"] | null | undefined;
+        if (cooldownActions.airdrop && this.deps.db) {
+          try {
+            airdrop = await buildAirdropPool({
+              cfg,
+              nowSecs,
+              connection,
+              db: this.deps.db,
+              vault,
+              log,
+            });
+          } catch (e) {
+            // Never let pool-building block a briefing; fall back to the plain
+            // cooldown airdrop entry (old shape) rather than dropping the brief.
+            log.error("airdrop pool build failed; briefing without pool enrichment", e);
+            airdrop = undefined;
+          }
+        }
+
+        const briefing = buildBriefing(cfg, lamportsToSol(lamports), activity, nowSecs, {
+          ...this.memoryOpts(),
+          airdrop,
+        });
         await onBrief(briefing);
         activity.reset();
         this.lastBriefAt = Date.now();

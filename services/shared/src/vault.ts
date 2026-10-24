@@ -78,10 +78,29 @@ export async function fetchVaultConfig(
 /** The three menu actions. */
 export type MenuAction = "burn" | "airdrop" | "bounty";
 
+/** A pool member Pennyboi may hand-pick as "favored" (docs/11 §3). */
+export interface FavoredCandidate {
+  wallet: string;
+  nickname?: string;
+  reason?: string;
+  held_hours: number;
+  balance_tokens: number;
+}
+
 /** Actions currently OFF cooldown, with their caps — shape per docs/04. */
 export interface AvailableActions {
   burn?: { cap_lamports: number };
-  airdrop?: { cap_lamports: number; max_recipients: number };
+  airdrop?: {
+    cap_lamports: number;
+    max_recipients: number;
+    // Enriched by Eyes at a threshold (docs/11); absent on a plain cooldown read.
+    // When present, Pennyboi hand-picks up to `favored_max` from
+    // `favored_candidates` and code fills the rest from the pool by fortune.
+    recipients?: number;
+    favored_max?: number;
+    pool_size?: number;
+    favored_candidates?: FavoredCandidate[];
+  };
   bounty?: { cap_lamports: number };
 }
 
