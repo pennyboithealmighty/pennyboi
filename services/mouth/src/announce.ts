@@ -40,7 +40,9 @@ export async function announce(ctx: MouthCtx, a: AnnounceInput): Promise<void> {
 
   await sendSafe(ctx, text, { threadId: ctx.cfg.topics.general });
 
-  // Mirror to X (narration + link). sendSafe's filter is Telegram-only; Solscan
-  // is on the allowlist and X links are fine, so post the same text.
-  await ctx.x.post(a.solscanUrl ? `${a.narration}\n${a.solscanUrl}` : a.narration);
+  // Mirror to X only in live mode. In prelaunch/off, threshold news stays
+  // Telegram-only — nothing on-chain/devnet ever reaches X (docs/09 §1).
+  if (ctx.cfg.x.mode === "live") {
+    await ctx.x.post(a.solscanUrl ? `${a.narration}\n${a.solscanUrl}` : a.narration);
+  }
 }

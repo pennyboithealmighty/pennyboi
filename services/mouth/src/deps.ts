@@ -4,6 +4,7 @@ import type { Bot } from "grammy";
 import type { ChainReader } from "./chain.js";
 import type { MouthConfig } from "./config.js";
 import type { Logger } from "./log.js";
+import type { ProphecyScheduler } from "./prophecy-scheduler.js";
 import type { ReplyRateLimiter } from "./ratelimit.js";
 import type { XPoster } from "./xposter.js";
 
@@ -15,4 +16,5 @@ export interface MouthCtx {
   chain: ChainReader;
   rate: ReplyRateLimiter;
   log: Logger;
+  prophecy: ProphecyScheduler;
 }

@@ -27,13 +27,24 @@ async function runDaily(m: MouthCtx): Promise<void> {
 
   // Owner digest (private).
   if (m.cfg.ownerId) {
+    const dayStart = (() => {
+      const d = new Date();
+      d.setHours(0, 0, 0, 0);
+      return Math.floor(d.getTime() / 1000);
+    })();
+    const rej = m.db.lastXRejection();
     const digest = [
       "DAILY DIGEST",
       s ? `treasury ${s.balanceSol.toFixed(4)} SOL, step ${s.step}` : "treasury: (not deployed)",
       `actions (24h): ${actionsToday}`,
       `muted ${m.db.mutedCount(now)}, banned ${m.db.bannedCount()}`,
+      m.cfg.x.mode !== "off"
+        ? `prophecy (${m.cfg.x.mode}): ${m.db.xPostedTodayCount(dayStart)} posted today${rej ? `, last rejection: ${rej.rejection_reason}` : ""}`
+        : null,
       `quote: "${sermon.slice(0, 120)}"`,
-    ].join("\n");
+    ]
+      .filter(Boolean)
+      .join("\n");
     try {
       await m.bot.api.sendMessage(m.cfg.ownerId, digest);
     } catch (e) {

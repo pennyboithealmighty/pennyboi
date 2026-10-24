@@ -13,6 +13,7 @@ import type { MouthCtx } from "./deps.js";
 import { log } from "./log.js";
 import { registerModeration } from "./moderation.js";
 import { createNarrateServer } from "./narrate-server.js";
+import { ProphecyScheduler } from "./prophecy-scheduler.js";
 import { ReplyRateLimiter } from "./ratelimit.js";
 import { XPoster } from "./xposter.js";
 
@@ -42,11 +43,14 @@ async function main(): Promise<void> {
     chain: new ChainReader(),
     rate,
     log,
+    prophecy: undefined as unknown as ProphecyScheduler, // set just below
   };
+  m.prophecy = new ProphecyScheduler(m);
 
   bot.catch((err) => log.error("bot error", err.error));
   registerCommands(m);
   registerModeration(m);
+  m.prophecy.start(); // no-op when X_MODE=off
 
   // HTTP endpoint for Hands narration + health.
   createNarrateServer(m).listen(cfg.httpPort, () => {

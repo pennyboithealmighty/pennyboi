@@ -204,4 +204,55 @@ export function registerCommands(m: MouthCtx): void {
       ].join("\n")
     );
   });
+
+  // ---- X pre-launch "Prophecy" owner controls (docs/09 §5) ---------------
+
+  bot.command("xstatus", async (c) => {
+    if (!ownerPrivate(c, m)) return;
+    const s = m.prophecy.status();
+    const recent = m.db.recentXPosts(3);
+    const rej = m.db.lastXRejection();
+    const lines = [
+      `X mode: ${s.mode}${s.paused ? "  (PAUSED)" : ""}`,
+      `posts today: ${s.postsToday}   next slot: ${s.nextSlotIso ?? "none scheduled"}`,
+      "recent:",
+      ...recent.map((r) => `  [${r.status}] ${r.x_post_id ? r.x_post_id + " " : ""}${r.text.slice(0, 80)}`),
+      rej ? `last rejection: ${rej.rejection_reason} — ${rej.text.slice(0, 80)}` : "last rejection: none",
+    ];
+    return c.reply(lines.join("\n"));
+  });
+
+  bot.command("xpost", async (c) => {
+    if (!ownerPrivate(c, m)) return;
+    const text = argText(c);
+    if (!text) return c.reply("Usage: /xpost <text>");
+    const r = await m.prophecy.postExact(text);
+    return c.reply(
+      r.status === "posted"
+        ? `posted to X (${r.xPostId})`
+        : `not posted: ${r.status}${r.reason ? " — " + r.reason : ""}`
+    );
+  });
+
+  bot.command("xpause", async (c) => {
+    if (!ownerPrivate(c, m)) return;
+    m.prophecy.pause();
+    return c.reply("Prophecy schedule paused. (mode unchanged)");
+  });
+
+  bot.command("xresume", async (c) => {
+    if (!ownerPrivate(c, m)) return;
+    m.prophecy.resume();
+    return c.reply("Prophecy schedule resumed.");
+  });
+
+  bot.command("xdryrun", async (c) => {
+    if (!ownerPrivate(c, m)) return;
+    const r = await m.prophecy.produceAndPost(true);
+    return c.reply(
+      r.status === "dryrun"
+        ? `[dry run · ${r.theme}] would post:\n\n${r.text}`
+        : `dry run produced nothing: ${r.status}${r.reason ? " — " + r.reason : ""}`
+    );
+  });
 }

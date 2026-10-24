@@ -91,3 +91,15 @@ CREATE TABLE IF NOT EXISTS kv (
   key   TEXT PRIMARY KEY,
   value TEXT NOT NULL
 );
+
+-- ---- X pre-launch "Prophecy" posts (docs/09) ----------------------------
+CREATE TABLE IF NOT EXISTS x_posts (
+  id               INTEGER PRIMARY KEY AUTOINCREMENT,
+  ts               INTEGER NOT NULL,
+  theme            TEXT,
+  mood             TEXT,
+  text             TEXT NOT NULL,
+  x_post_id        TEXT,
+  status           TEXT NOT NULL,   -- posted | rejected | skipped | error
+  rejection_reason TEXT
+);

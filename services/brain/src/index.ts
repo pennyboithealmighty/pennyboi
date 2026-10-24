@@ -7,6 +7,7 @@ import express, { type Request, type Response } from "express";
 import { envNum, envStr, type Briefing } from "@pennyboi/shared";
 import { anthropicSettings, makeAnthropicCaller } from "./anthropic.js";
 import { decide, type CallLLM } from "./decide.js";
+import { generateProphecy, type ProphecyInput } from "./prophecy.js";
 import { log } from "./log.js";
 
 function getCaller(): CallLLM {
@@ -79,6 +80,37 @@ function main(): void {
     void forwardToHands({ briefing: body.briefing, decision: result.decision });
 
     res.json({ ok: true, ...result });
+  });
+
+  // X pre-launch "Prophecy" generation (docs/09). Mouth schedules + sanitizes;
+  // Brain just produces the in-character post text.
+  app.post("/prophecy", async (req: Request, res: Response) => {
+    const body = req.body as Partial<ProphecyInput>;
+    if (!body?.theme || !body?.mood) {
+      return res.status(400).json({ ok: false, error: "missing mood/theme" });
+    }
+    let callLLM: CallLLM;
+    try {
+      callLLM = getCaller();
+    } catch (e) {
+      return res.status(503).json({ ok: false, error: (e as Error).message });
+    }
+    const result = await generateProphecy(
+      {
+        mood: body.mood,
+        theme: body.theme,
+        daysUntilAwakening: body.daysUntilAwakening ?? null,
+        recentPosts: Array.isArray(body.recentPosts) ? body.recentPosts : [],
+      },
+      callLLM
+    );
+    log.info(`prophecy: ${result.prophecy ? "generated" : "SKIPPED"} (attempts=${result.attempts})`);
+    for (const a of result.attemptsLog) {
+      if (a.ok) continue;
+      log.warn(`prophecy attempt ${a.attempt} rejected: ${a.error}`);
+      log.warn(`prophecy attempt ${a.attempt} raw:\n${a.raw ?? "(no response — the API call threw)"}`);
+    }
+    res.json({ ok: true, prophecy: result.prophecy, attempts: result.attempts });
   });
 
   app.listen(port, () => {

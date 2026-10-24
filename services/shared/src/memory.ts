@@ -29,6 +29,16 @@ export interface ActionRow {
   tx_sig: string | null;
 }
 
+export interface XPostRow {
+  ts: number;
+  theme: string | null;
+  mood: string | null;
+  text: string;
+  x_post_id: string | null;
+  status: string;
+  rejection_reason: string | null;
+}
+
 /** A batch of memory changes derived from an action + its narration. */
 export interface MemoryUpdate {
   seen: string[];
@@ -325,6 +335,59 @@ export class MemoryDb {
     this.db
       .prepare(`INSERT INTO kv (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value`)
       .run(key, value);
+  }
+
+  // ---- X pre-launch posts (docs/09) --------------------------------------
+
+  recordXPost(r: {
+    now: number;
+    theme?: string;
+    mood?: string;
+    text: string;
+    xPostId?: string;
+    status: "posted" | "rejected" | "skipped" | "error";
+    rejectionReason?: string;
+  }): number {
+    const info = this.db
+      .prepare(
+        `INSERT INTO x_posts (ts, theme, mood, text, x_post_id, status, rejection_reason)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`
+      )
+      .run(r.now, r.theme ?? null, r.mood ?? null, r.text, r.xPostId ?? null, r.status, r.rejectionReason ?? null);
+    return Number(info.lastInsertRowid);
+  }
+
+  recentXPosts(n: number): XPostRow[] {
+    return this.db
+      .prepare(
+        `SELECT ts, theme, mood, text, x_post_id, status, rejection_reason
+           FROM x_posts ORDER BY id DESC LIMIT ?`
+      )
+      .all(n) as XPostRow[];
+  }
+
+  /** Posts actually sent to X since `dayStartTs`. */
+  xPostedTodayCount(dayStartTs: number): number {
+    return (this.db
+      .prepare(`SELECT COUNT(*) AS n FROM x_posts WHERE status = 'posted' AND ts >= ?`)
+      .get(dayStartTs) as { n: number }).n;
+  }
+
+  /** Whether a posted tweet since `dayStartTs` already carried the pennyboi.com link. */
+  xLinkUsedToday(dayStartTs: number): boolean {
+    return (this.db
+      .prepare(
+        `SELECT COUNT(*) AS n FROM x_posts
+          WHERE status = 'posted' AND ts >= ? AND text LIKE '%pennyboi.com%'`
+      )
+      .get(dayStartTs) as { n: number }).n > 0;
+  }
+
+  lastXRejection(): { ts: number; text: string; rejection_reason: string | null } | null {
+    const r = this.db
+      .prepare(`SELECT ts, text, rejection_reason FROM x_posts WHERE status = 'rejected' ORDER BY id DESC LIMIT 1`)
+      .get() as { ts: number; text: string; rejection_reason: string | null } | undefined;
+    return r ?? null;
   }
 }
 

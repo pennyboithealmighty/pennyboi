@@ -23,12 +23,35 @@ export interface MouthConfig {
   allowedAddresses: string[];
   links: { pumpfun: string; github: string; group: string };
   x: {
-    enabled: boolean;
+    mode: XMode;
     apiKey: string;
     apiSecret: string;
     accessToken: string;
     accessSecret: string;
+    prelaunch: {
+      postsPerDay: number;
+      hoursStart: number; // local hour 0-23
+      hoursEnd: number;
+      linkRate: number; // 0..1
+      launchDate: string; // ISO date or ""
+    };
   };
+}
+
+export type XMode = "off" | "prelaunch" | "live";
+
+// X_MODE replaces X_ENABLED; treat X_ENABLED=true as "live" for back-compat.
+function xMode(): XMode {
+  const m = envStr("X_MODE").toLowerCase();
+  if (m === "off" || m === "prelaunch" || m === "live") return m;
+  if (/^(1|true|yes|on)$/i.test(envStr("X_ENABLED"))) return "live";
+  return "off";
+}
+
+function parseHours(s: string): { hoursStart: number; hoursEnd: number } {
+  const m = s.match(/^(\d{1,2})\s*-\s*(\d{1,2})$/);
+  if (!m) return { hoursStart: 9, hoursEnd: 22 };
+  return { hoursStart: Number(m[1]), hoursEnd: Number(m[2]) };
 }
 
 /** General topic -> undefined (post to root). Real topics are >1. */
@@ -82,11 +105,17 @@ export function loadMouthConfig(): MouthConfig {
     allowedAddresses,
     links: { pumpfun, github, group },
     x: {
-      enabled: /^(1|true|yes|on)$/i.test(envStr("X_ENABLED", "false")),
+      mode: xMode(),
       apiKey: envStr("X_API_KEY"),
       apiSecret: envStr("X_API_SECRET"),
       accessToken: envStr("X_ACCESS_TOKEN"),
       accessSecret: envStr("X_ACCESS_SECRET"),
+      prelaunch: {
+        postsPerDay: envNum("X_PRELAUNCH_POSTS_PER_DAY", 3),
+        ...parseHours(envStr("X_PRELAUNCH_HOURS", "09-22")),
+        linkRate: envNum("X_PRELAUNCH_LINK_RATE", 0.25),
+        launchDate: envStr("X_LAUNCH_DATE"),
+      },
     },
   };
 }
