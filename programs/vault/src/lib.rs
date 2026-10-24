@@ -109,7 +109,7 @@ pub mod vault {
         let seeds: &[&[u8]] = &[b"treasury".as_ref(), &[treasury_bump]];
         system_program::transfer(
             CpiContext::new_with_signer(
-                ctx.accounts.system_program.to_account_info(),
+                ctx.accounts.system_program.key(),
                 system_program::Transfer {
                     from: ctx.accounts.treasury.to_account_info(),
                     to: ctx.accounts.burn_route.to_account_info(),
@@ -134,7 +134,7 @@ pub mod vault {
     /// `remaining_accounts` in the same order as `recipients`; each must be a
     /// system account and match the declared pubkey.
     pub fn airdrop<'info>(
-        ctx: Context<'_, '_, '_, 'info, Airdrop<'info>>,
+        ctx: Context<'info, Airdrop<'info>>,
         recipients: Vec<Pubkey>,
         amounts: Vec<u64>,
     ) -> Result<()> {
@@ -181,7 +181,7 @@ pub mod vault {
 
             system_program::transfer(
                 CpiContext::new_with_signer(
-                    ctx.accounts.system_program.to_account_info(),
+                    ctx.accounts.system_program.key(),
                     system_program::Transfer {
                         from: ctx.accounts.treasury.to_account_info(),
                         to: acct.to_account_info(),
@@ -231,7 +231,7 @@ pub mod vault {
         let seeds: &[&[u8]] = &[b"treasury".as_ref(), &[treasury_bump]];
         system_program::transfer(
             CpiContext::new_with_signer(
-                ctx.accounts.system_program.to_account_info(),
+                ctx.accounts.system_program.key(),
                 system_program::Transfer {
                     from: ctx.accounts.treasury.to_account_info(),
                     to: ctx.accounts.recipient.to_account_info(),
@@ -270,7 +270,7 @@ pub mod vault {
             let seeds: &[&[u8]] = &[b"fees".as_ref(), &[fees_bump]];
             system_program::transfer(
                 CpiContext::new_with_signer(
-                    ctx.accounts.system_program.to_account_info(),
+                    ctx.accounts.system_program.key(),
                     system_program::Transfer {
                         from: ctx.accounts.fees.to_account_info(),
                         to: ctx.accounts.treasury.to_account_info(),
@@ -365,7 +365,7 @@ pub mod vault {
         let seeds: &[&[u8]] = &[b"treasury".as_ref(), &[treasury_bump]];
         system_program::transfer(
             CpiContext::new_with_signer(
-                ctx.accounts.system_program.to_account_info(),
+                ctx.accounts.system_program.key(),
                 system_program::Transfer {
                     from: ctx.accounts.treasury.to_account_info(),
                     to: ctx.accounts.recipient.to_account_info(),
