@@ -6,7 +6,7 @@ resolution = true
 skip-lint = false
 
 [programs.devnet]
-vault = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
+vault = "4bNohxQ1BzN2zDLHixfgf4vd6dqwbdPddmQZ5eioX8HA"
 
 [programs.localnet]
 vault = "4bNohxQ1BzN2zDLHixfgf4vd6dqwbdPddmQZ5eioX8HA"
@@ -14,6 +14,15 @@ vault = "4bNohxQ1BzN2zDLHixfgf4vd6dqwbdPddmQZ5eioX8HA"
 [provider]
 cluster = "localnet"
 wallet = "~/.config/solana/id.json"
+
+# NOTE: Anchor 1.x defaults `anchor test`/`anchor localnet` to Surfpool, which
+# fails to build from crates.io here. There is no Anchor.toml switch for the
+# backend, so run the tests against the classic validator with the flag:
+#   anchor test --validator legacy
+# (uses solana-test-validator; `programs.localnet` above is loaded at genesis).
+# [test.validator] below configures that legacy validator.
+[test.validator]
+bind_address = "127.0.0.1"
 
 [scripts]
 test = "pnpm --filter @pennyboi/tests test"

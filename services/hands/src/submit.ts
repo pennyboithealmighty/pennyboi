@@ -1,7 +1,7 @@
 // Build, sign (with the agent wallet on the program's provider) and submit the
 // Anchor instruction for a decision. Returns the confirmed signature.
 
-import * as anchor from "@coral-xyz/anchor";
+import BN from "bn.js"; // @coral-xyz/anchor's BN isn't exposed under ESM; import it directly.
 import type { LoadedVault } from "@pennyboi/shared";
 import { PublicKey, SystemProgram, type Commitment } from "@solana/web3.js";
 import type { Decision } from "./types.js";
@@ -16,7 +16,7 @@ export function makeSubmitter(vault: LoadedVault, commitment: Commitment): Submi
   return async (d: Decision): Promise<string> => {
     switch (d.action) {
       case "burn": {
-        const amount = new anchor.BN(d.params.amount_lamports as number);
+        const amount = new BN(d.params.amount_lamports as number);
         return (program.methods as any)
           .burn(amount)
           .accountsStrict({
@@ -31,7 +31,7 @@ export function makeSubmitter(vault: LoadedVault, commitment: Commitment): Submi
 
       case "airdrop": {
         const recips = (d.params.recipients as string[]).map((r) => new PublicKey(r));
-        const amounts = (d.params.amounts as number[]).map((a) => new anchor.BN(a));
+        const amounts = (d.params.amounts as number[]).map((a) => new BN(a));
         return (program.methods as any)
           .airdrop(recips, amounts)
           .accountsStrict({
@@ -48,7 +48,7 @@ export function makeSubmitter(vault: LoadedVault, commitment: Commitment): Submi
 
       case "bounty": {
         const to = new PublicKey(d.params.to as string);
-        const amount = new anchor.BN(d.params.amount_lamports as number);
+        const amount = new BN(d.params.amount_lamports as number);
         const memo = d.params.memo as string;
         return (program.methods as any)
           .bounty(to, amount, memo)
