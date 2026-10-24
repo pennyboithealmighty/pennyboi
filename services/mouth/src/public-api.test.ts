@@ -52,14 +52,27 @@ test("buildDecrees merges + sorts + links tx + drops empties", () => {
     { ts: 200, narration: "NONE", tx_sig: null },
   ];
   const xposts = [
-    { ts: 250, text: "I STIR", status: "posted" },
-    { ts: 260, text: "rejected one", status: "rejected" }, // dropped
+    { ts: 250, text: "I STIR", status: "posted", x_post_id: "1234567890" },
+    { ts: 260, text: "rejected one", status: "rejected", x_post_id: null }, // dropped
+    { ts: 270, text: "posted, no id yet", status: "posted", x_post_id: null },
   ];
   const out = buildDecrees(actions, xposts, 10, (s) => "https://solscan.io/tx/" + s);
-  assert.deepEqual(out.map((d) => d.ts), [250, 200, 100]); // desc, empties dropped
+  assert.deepEqual(out.map((d) => d.ts), [270, 250, 200, 100]); // desc, empties/rejected dropped
   assert.equal(out.find((d) => d.ts === 100)!.solscanUrl, "https://solscan.io/tx/sigA");
-  assert.equal(out.find((d) => d.ts === 200)!.solscanUrl, undefined);
+  assert.equal(out.find((d) => d.ts === 200)!.solscanUrl, undefined); // no-op stays unlinked
   assert.equal(out.find((d) => d.ts === 250)!.kind, "prophecy");
+  assert.equal(out.find((d) => d.ts === 250)!.xPostId, "1234567890"); // X id flows through
+  assert.equal(out.find((d) => d.ts === 270)!.xPostId, undefined); // posted but no id -> unlinked
+});
+
+test("buildDecrees honors the limit (latest N)", () => {
+  const actions = Array.from({ length: 8 }, (_, i) => ({
+    ts: 100 + i,
+    narration: "d" + i,
+    tx_sig: "sig" + i,
+  }));
+  const out = buildDecrees(actions, [], 4, (s) => "https://solscan.io/tx/" + s);
+  assert.deepEqual(out.map((d) => d.ts), [107, 106, 105, 104]); // newest 4 only
 });
 
 test("sanitizeOfferings never leaks usernames/ids", () => {

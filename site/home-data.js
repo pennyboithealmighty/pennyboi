@@ -34,16 +34,42 @@
       .then(function (j) { if (!j.ok) throw new Error("api"); return j.data; });
   }
 
+  // The destination that proves a feed entry: a decree's Solscan tx, or a
+  // prophecy's X post (built from the configured handle + the public status id).
+  function verifyUrl(r) {
+    if (r.kind === "prophecy") {
+      var base = (CFG.X_URL || "").replace(/\/+$/, "");
+      return base && r.xPostId ? base + "/status/" + encodeURIComponent(r.xPostId) : null;
+    }
+    return r.solscanUrl || null; // decree tx; absent for no-op ("none") narrations
+  }
+
   function renderDecrees(rows) {
     var b = el("decrees-body");
     if (!b) return;
     if (!rows.length) { silent("decrees-body", "No decrees yet. The silence is part of the ritual."); return; }
-    b.innerHTML = rows.map(function (r) {
+    var items = rows.map(function (r) {
       var tag = '<span class="decree-tag">' + (r.kind === "prophecy" ? "prophecy" : "decree") + "</span>";
-      var link = r.solscanUrl ? ' · <a href="' + esc(r.solscanUrl) + '" target="_blank" rel="noopener">tx ↗</a>' : "";
-      return '<article class="decree"><div class="decree-meta">' + tag +
-        "<span>" + esc(when(r.ts)) + "</span>" + link + "</div><p>" + esc(r.text) + "</p></article>";
-    }).join("");
+      var href = verifyUrl(r);
+      var verify = href ? ' · <span class="decree-verify">verify ↗</span>' : "";
+      var meta = '<div class="decree-meta">' + tag + "<span>" + esc(when(r.ts)) + "</span>" + verify + "</div>";
+      // The whole decree text is the link (SERMON and "none" entries stay plain).
+      var body = href
+        ? '<a class="decree-link" href="' + esc(href) + '" target="_blank" rel="noopener"><p>' + esc(r.text) + "</p></a>"
+        : "<p>" + esc(r.text) + "</p>";
+      return '<article class="decree">' + meta + body + "</article>";
+    });
+    items.push(moreLine());
+    b.innerHTML = items.join("");
+  }
+
+  // "more decrees → Telegram / X" under the list; each link shown only if set.
+  function moreLine() {
+    var parts = [];
+    if (CFG.TELEGRAM_URL) parts.push('<a href="' + esc(CFG.TELEGRAM_URL) + '" target="_blank" rel="noopener">Telegram</a>');
+    if (CFG.X_URL) parts.push('<a href="' + esc(CFG.X_URL) + '" target="_blank" rel="noopener">X</a>');
+    if (!parts.length) return "";
+    return '<p class="decrees-more">more decrees → ' + parts.join(" / ") + "</p>";
   }
 
   function renderOfferings(rows) {
@@ -68,7 +94,7 @@
     }).join("");
   }
 
-  get("/public/decrees?limit=10").then(renderDecrees).catch(function () { silent("decrees-body"); });
+  get("/public/decrees?limit=4").then(renderDecrees).catch(function () { silent("decrees-body"); });
   get("/public/offerings?limit=10").then(renderOfferings).catch(function () { silent("offerings-body"); });
   get("/public/grudges").then(function (d) { renderHall("grudges-body", d, "He holds no grudges yet. Give it time."); })
     .catch(function () { silent("grudges-body"); });

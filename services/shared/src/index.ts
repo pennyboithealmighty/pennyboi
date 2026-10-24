@@ -9,3 +9,4 @@ export * from "./vault.js";
 export * from "./briefing.js";
 export * from "./memory.js";
 export * from "./extract.js";
+export * from "./airdrop.js";

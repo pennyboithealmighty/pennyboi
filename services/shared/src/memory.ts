@@ -39,6 +39,26 @@ export interface XPostRow {
   rejection_reason: string | null;
 }
 
+export interface ExclusionRow {
+  address: string;
+  reason: string | null;
+  ts: number;
+}
+
+export interface AirdropRoundRow {
+  step: number;
+  ts: number;
+  seed: string;
+  blockhash: string;
+  pool_hash: string;
+  pool_size: number;
+  pool_json: string;
+  favored_json: string | null;
+  fortune_json: string | null;
+  amount_each: number | null;
+  tx_sig: string | null;
+}
+
 /** A batch of memory changes derived from an action + its narration. */
 export interface MemoryUpdate {
   seen: string[];
@@ -404,6 +424,118 @@ export class MemoryDb {
       .prepare(`SELECT ts, text, rejection_reason FROM x_posts WHERE status = 'rejected' ORDER BY id DESC LIMIT 1`)
       .get() as { ts: number; text: string; rejection_reason: string | null } | undefined;
     return r ?? null;
+  }
+
+  // ---- airdrop eligibility & rounds (docs/11) -----------------------------
+
+  addExclusion(address: string, reason: string, now: number): void {
+    this.db
+      .prepare(
+        `INSERT INTO airdrop_exclusions (address, reason, ts) VALUES (?, ?, ?)
+         ON CONFLICT(address) DO UPDATE SET reason = excluded.reason, ts = excluded.ts`
+      )
+      .run(address, reason, now);
+  }
+
+  removeExclusion(address: string): void {
+    this.db.prepare(`DELETE FROM airdrop_exclusions WHERE address = ?`).run(address);
+  }
+
+  listExclusions(): ExclusionRow[] {
+    return this.db
+      .prepare(`SELECT address, reason, ts FROM airdrop_exclusions ORDER BY ts DESC`)
+      .all() as ExclusionRow[];
+  }
+
+  /** The exclusion addresses as a set, for the pool filter. */
+  excludedSet(): Set<string> {
+    const rows = this.db.prepare(`SELECT address FROM airdrop_exclusions`).all() as Array<{ address: string }>;
+    return new Set(rows.map((r) => r.address));
+  }
+
+  /** Store (or replace) the pool snapshot + seed for a threshold step. */
+  saveAirdropRound(r: {
+    step: number;
+    now: number;
+    seed: string;
+    blockhash: string;
+    poolHash: string;
+    poolSize: number;
+    pool: string[];
+  }): void {
+    this.db
+      .prepare(
+        `INSERT INTO airdrop_rounds (step, ts, seed, blockhash, pool_hash, pool_size, pool_json)
+         VALUES (@step, @ts, @seed, @blockhash, @pool_hash, @pool_size, @pool_json)
+         ON CONFLICT(step) DO UPDATE SET
+           ts = excluded.ts, seed = excluded.seed, blockhash = excluded.blockhash,
+           pool_hash = excluded.pool_hash, pool_size = excluded.pool_size, pool_json = excluded.pool_json`
+      )
+      .run({
+        step: r.step,
+        ts: r.now,
+        seed: r.seed,
+        blockhash: r.blockhash,
+        pool_hash: r.poolHash,
+        pool_size: r.poolSize,
+        pool_json: JSON.stringify(r.pool),
+      });
+  }
+
+  /** Record what actually went out, once Hands has signed the airdrop. */
+  recordAirdropResult(r: {
+    step: number;
+    favored: string[];
+    fortune: string[];
+    amountEach: number;
+    txSig: string | null;
+  }): void {
+    this.db
+      .prepare(
+        `UPDATE airdrop_rounds
+            SET favored_json = ?, fortune_json = ?, amount_each = ?, tx_sig = ?
+          WHERE step = ?`
+      )
+      .run(JSON.stringify(r.favored), JSON.stringify(r.fortune), r.amountEach, r.txSig, r.step);
+  }
+
+  getAirdropRound(step: number): AirdropRoundRow | null {
+    const r = this.db.prepare(`SELECT * FROM airdrop_rounds WHERE step = ?`).get(step) as
+      | AirdropRoundRow
+      | undefined;
+    return r ?? null;
+  }
+
+  recentAirdropRounds(n: number): AirdropRoundRow[] {
+    return this.db
+      .prepare(`SELECT * FROM airdrop_rounds ORDER BY step DESC LIMIT ?`)
+      .all(n) as AirdropRoundRow[];
+  }
+
+  /** Wallets that won an airdrop since `sinceTs` (for the repeat-cooldown rule). */
+  airdropWinnersSince(sinceTs: number): Map<string, number> {
+    const rows = this.db
+      .prepare(`SELECT ts, favored_json, fortune_json FROM airdrop_rounds WHERE ts >= ? AND tx_sig IS NOT NULL`)
+      .all(sinceTs) as Array<{ ts: number; favored_json: string | null; fortune_json: string | null }>;
+    const out = new Map<string, number>();
+    for (const row of rows) {
+      const won = [...safeArr(row.favored_json), ...safeArr(row.fortune_json)];
+      for (const w of won) {
+        const prev = out.get(w);
+        if (prev == null || row.ts > prev) out.set(w, row.ts);
+      }
+    }
+    return out;
+  }
+}
+
+function safeArr(json: string | null): string[] {
+  if (!json) return [];
+  try {
+    const v = JSON.parse(json);
+    return Array.isArray(v) ? (v as string[]) : [];
+  } catch {
+    return [];
   }
 }
 

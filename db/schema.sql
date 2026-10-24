@@ -92,6 +92,30 @@ CREATE TABLE IF NOT EXISTS kv (
   value TEXT NOT NULL
 );
 
+-- ---- Airdrop eligibility & rounds (docs/11) ------------------------------
+-- Manual bot/LP exclusion list, editable via the owner /exclude command.
+CREATE TABLE IF NOT EXISTS airdrop_exclusions (
+  address TEXT PRIMARY KEY,
+  reason  TEXT,
+  ts      INTEGER NOT NULL
+);
+
+-- One row per airdrop threshold: the eligible pool snapshot + the verifiable
+-- seed, so Hands can recompute the fortune draw and anyone can verify it.
+CREATE TABLE IF NOT EXISTS airdrop_rounds (
+  step         INTEGER PRIMARY KEY,   -- threshold_step this snapshot was built for
+  ts           INTEGER NOT NULL,
+  seed         TEXT NOT NULL,         -- sha256(blockhash || step)
+  blockhash    TEXT NOT NULL,
+  pool_hash    TEXT NOT NULL,         -- sha256 of the sorted pool pubkeys
+  pool_size    INTEGER NOT NULL,
+  pool_json    TEXT NOT NULL,         -- sorted pubkeys (for /pool verification)
+  favored_json TEXT,                  -- Pennyboi's picks (filled at execution)
+  fortune_json TEXT,                  -- the random picks (filled at execution)
+  amount_each  INTEGER,
+  tx_sig       TEXT
+);
+
 -- ---- X pre-launch "Prophecy" posts (docs/09) ----------------------------
 CREATE TABLE IF NOT EXISTS x_posts (
   id               INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -1,0 +1,36 @@
+{
+  "_comment": "Devnet mock holder source for HOLDER_SOURCE=mock (docs/11 §7A). Time fields are 'seconds ago' offsets resolved against now by parseMockHolders, so the scenarios stay valid whenever this is run. Defaults assumed: min_hold=100000 tokens, min_hold=24h, repeat_cooldown=72h, and a last threshold ~2h ago. Wallets 0-17 are eligible; 18-29 each fail exactly one rule.",
+  "holders": [
+    { "address": "AsSrWLSe8X1Q3vnGzk42FSKqc9zNsVkx8qyqNdiFdAhh", "balance": 1500000, "qualified_secs_ago": 1200000, "last_sell_secs_ago": 500000, "note": "eligible — large holder, sold long before the last threshold" },
+    { "address": "HKTCJvK5mtkJC6WwVEugG1AzNxyQudPR5v6r9mUfc3FL", "balance": 250000, "qualified_secs_ago": 300000, "note": "eligible" },
+    { "address": "7TcqDniwz6RDQfPPLAL9svGJ2FnK5rrhB8mwncVyjfxC", "balance": 100000, "qualified_secs_ago": 200000, "note": "eligible — exactly at the minimum" },
+    { "address": "2u5TPQtMMkqEtE3VZzRFdiSocs2mQJS1fc46iuhym4fD", "balance": 800000, "qualified_secs_ago": 900000, "note": "eligible" },
+    { "address": "6VfaZRjAYPVTbEAkoLdBpJUxN5qoqDRc6TPJg1hAAu5S", "balance": 320000, "qualified_secs_ago": 150000, "note": "eligible" },
+    { "address": "3gbWYHord2VuL17CzCWTPucFzRb5khVXKP6qQvixQ6B2", "balance": 1200000, "qualified_secs_ago": 2000000, "note": "eligible" },
+    { "address": "BykjfyC7vzs7cVbFTKpAipQomzqo7i3ceCYHpmM6WhrV", "balance": 450000, "qualified_secs_ago": 400000, "note": "eligible" },
+    { "address": "Axh2tEqjK4SbzG46B7BSwMbzo6GwHVfvmjJJLw8GnXyG", "balance": 999000, "qualified_secs_ago": 120000, "note": "eligible" },
+    { "address": "GMta6R93SUURaVeCvext7rLeje5L76Dz7CqmHU4T75vK", "balance": 150000, "qualified_secs_ago": 95000, "note": "eligible — just past the 24h minimum" },
+    { "address": "rnvQQ6bC9ccBEvY2c8HzvuD6y6r2qC2GnswajVCSkVT", "balance": 2000000, "qualified_secs_ago": 1800000, "note": "eligible — whale" },
+    { "address": "5o8UpLLUYMvUrpLZ2mvYTXiNfBzubpmUpotjtcJFMVt4", "balance": 600000, "qualified_secs_ago": 600000, "note": "eligible" },
+    { "address": "2Z5d5HKeM179nY47h7icwiueyqkBuqnTrb7pX9vcwHJ5", "balance": 175000, "qualified_secs_ago": 250000, "note": "eligible" },
+    { "address": "HCePjQ1fx7Lbu7inym3BZjxLXyqr7akBmRHHxgb9iu7w", "balance": 540000, "qualified_secs_ago": 350000, "note": "eligible" },
+    { "address": "G7nriWacYHV59qCfn4sQewvFyrc9jNjG6CuVY7vFyvea", "balance": 380000, "qualified_secs_ago": 500000, "note": "eligible" },
+    { "address": "EgHfimu53rsvV1vD5epg572zZwv3mXSv2Bc8uKLbdrH7", "balance": 720000, "qualified_secs_ago": 700000, "note": "eligible" },
+    { "address": "Abp791nCdUW4Mv894jwg5d9aoBHvuvCw4hGfwW3j41aE", "balance": 110000, "qualified_secs_ago": 130000, "note": "eligible" },
+    { "address": "236G9Vy8yA9K5ocNKrTTg7gkTKNVWTvBrJEg6JjEh9ga", "balance": 905000, "qualified_secs_ago": 1000000, "note": "eligible" },
+    { "address": "4jXWpqvVxEdvZGeDsdPo3K17WJ9xgczFFaxtXDScEtXq", "balance": 260000, "qualified_secs_ago": 180000, "note": "eligible" },
+
+    { "address": "7EuAztb6vDRVjfi4xgjZP2JVU98yzRbzKY4nYgk8TLuc", "balance": 50000, "qualified_secs_ago": 300000, "note": "INELIGIBLE rule 1 — holds under the minimum" },
+    { "address": "3XBTGFVZ2a92iXLPJkt1oQfrowh9uXPBqmmmLeaJptcC", "balance": 99999, "qualified_secs_ago": 300000, "note": "INELIGIBLE rule 1 — one token short" },
+    { "address": "H3eNfvmozSs9scctS4qQx6ZU42KEei34r8XtVRBTxMZ9", "balance": 10000, "qualified_secs_ago": 300000, "note": "INELIGIBLE rule 1 — tiny bag" },
+    { "address": "77zGxJG2zHk1R9CeFPSd5caH3HPG1kMJPPwjHu5L7eFR", "balance": 500000, "qualified_secs_ago": 3600, "note": "INELIGIBLE rule 2 — held only 1h" },
+    { "address": "9cTtFStUgzYf2xfAysNHBRnPsgQXS2V2Fv2CRPGzdyia", "balance": 500000, "qualified_secs_ago": 50000, "note": "INELIGIBLE rule 2 — held ~14h, under 24h" },
+    { "address": "3Mh6DFz5yxEzRJ3N92ESv4CYRRQuF5ir1Jipuft21wci", "balance": 500000, "qualified_secs_ago": 80000, "note": "INELIGIBLE rule 2 — held ~22h, just short" },
+    { "address": "D55xuGFuSuDSZLkJyTyGgogNzNE8sEUNheh5MPrRnbeC", "balance": 500000, "qualified_secs_ago": 300000, "last_sell_secs_ago": 1800, "note": "INELIGIBLE rule 3 — sold 30m ago, after the last threshold" },
+    { "address": "DosvcCbzYQtLrS8Vw7PrW8G1nzWerijCX2Nbz4nKjXFc", "balance": 500000, "qualified_secs_ago": 300000, "last_sell_secs_ago": 3600, "note": "INELIGIBLE rule 3 — sold 1h ago, after the last threshold" },
+    { "address": "7p4ymG1cUYLy8R2XjwNEJdiRr4M9Upwekx81TR8xcot4", "balance": 9999999, "qualified_secs_ago": 500000, "excluded": true, "note": "INELIGIBLE rule 5 — excluded (e.g. an LP pool), despite a huge balance" },
+    { "address": "2o6T5RH6KqAE83YZgrkZvA19BmMDyQ4LXLk4gymifEm8", "balance": 5000000, "qualified_secs_ago": 500000, "excluded": true, "note": "INELIGIBLE rule 5 — excluded (manual bot list)" },
+    { "address": "kFiW6BLcQBeme2RMr2abJjRWRoebuXLCUuV12eEgd5o", "balance": 500000, "qualified_secs_ago": 500000, "last_airdrop_secs_ago": 3600, "note": "INELIGIBLE rule 6 — won an airdrop 1h ago" },
+    { "address": "3yDszmBrLd1i1xGKttxsDCU8K7E75ZmpZZSHjGeqMhqR", "balance": 500000, "qualified_secs_ago": 500000, "last_airdrop_secs_ago": 200000, "note": "INELIGIBLE rule 6 — won ~55h ago, inside the 72h cooldown" }
+  ]
+}

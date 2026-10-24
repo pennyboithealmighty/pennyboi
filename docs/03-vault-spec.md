@@ -24,7 +24,7 @@ October 23, 2026 — all numbers are starting points, tune freely
 - `action_available: bool` (the "flag")
 - `burn_cap_lamports: u64` (default 0.10 SOL)
 - `airdrop_cap_lamports: u64` (default 0.10 SOL total)
-- `airdrop_max_recipients: u8` (default 20)
+- `airdrop_max_recipients: u8` (default 5)
 - `bounty_cap_lamports: u64` (default 0.05 SOL)
 - `burn_cooldown_secs: i64` (default 6 h)
 - `airdrop_cooldown_secs: i64` (default 12 h)
@@ -52,7 +52,7 @@ Common checks on every menu instruction:
 
 ### B) `airdrop(recipients: Vec<Pubkey>, amounts: Vec<u64>)`
 
-- `len(recipients) <= airdrop_max_recipients` (20)
+- `len(recipients) <= airdrop_max_recipients` (5)
 - `sum(amounts) <= airdrop_cap`
 - Pays SOL (v0.1) — simpler than token transfers; token airdrop can be v0.2.
 - Cooldown 12 h.

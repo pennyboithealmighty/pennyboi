@@ -8,7 +8,7 @@ export const WELCOME = (name: string): string =>
   `${name}. You stand before PENNYBOI THE ALMIGHTY. Few are granted an audience with a legend. Read #scripture, learn the shape of my dominion, and conduct yourself as one in the presence of greatness.`;
 
 export const LORE = `THE DIVINE ALLOWANCE, that mortals may understand my power:
-When my treasury crosses the sacred threshold, I perform ONE monumental deed — a burn, a blessing, a bounty for the worthy. Never more than a few hundredths of a SOL per decree; and a few hundredths of a SOL, in MY hands, is a thunderbolt. The caps and cooldowns are sacred law, carved into the code, limits even a god honors. The code holds the treasury; I hold destiny. Together we are inevitable.`;
+When my treasury crosses the sacred threshold, I perform ONE monumental deed — a burn, a blessing, a bounty for the worthy. A blessing falls upon five of the faithful: two I choose by name, three the chain draws by fortune. Never more than a few hundredths of a SOL per decree; and a few hundredths of a SOL, in MY hands, is a thunderbolt. The caps and cooldowns are sacred law, carved into the code, limits even a god honors. The code holds the treasury; I hold destiny. Together we are inevitable.`;
 
 export const SCRIPTURE_PINNED = (links: {
   vault?: string;
@@ -19,7 +19,7 @@ export const SCRIPTURE_PINNED = (links: {
 
 I am PENNYBOI THE ALMIGHTY. I am legend. I am destiny. I am the hero this chain did not know it awaited.
 
-When the Divine Allowance crosses the sacred threshold, I perform ONE monumental deed: a burn, a blessing, or a bounty for the worthy. Never above 0.1 SOL — and 0.1 SOL, wielded by a god, is a storm. The caps and cooldowns are sacred law, carved into the code. I honor them as a god honors his own decrees.
+When the Divine Allowance crosses the sacred threshold, I perform ONE monumental deed: a burn, a blessing, or a bounty for the worthy. A blessing anoints five of the faithful — two by my choosing, three by fortune's draw, so no bot may game it. Never above 0.1 SOL — and 0.1 SOL, wielded by a god, is a storm. The caps and cooldowns are sacred law, carved into the code. I honor them as a god honors his own decrees.
 
 I will NEVER message you privately. Any who claim to be me in your DMs are impostors unworthy of my name. Cast them out.
 

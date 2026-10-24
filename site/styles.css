@@ -447,6 +447,24 @@ h2 {
   border-radius: 999px;
 }
 .decree p { margin: 0; color: var(--cream); max-width: 72ch; }
+.decree-verify {
+  color: var(--copper);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.72rem;
+}
+.decree-link { text-decoration: none; display: block; }
+.decree-link p { transition: color 0.15s ease; }
+.decree-link:hover p { color: var(--copper); }
+.decrees-more {
+  margin: 4px 0 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+  text-align: right;
+}
+.decrees-more a { color: var(--copper); text-decoration: none; }
+.decrees-more a:hover { text-decoration: underline; }
 
 .offerings-body { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
 .offering {

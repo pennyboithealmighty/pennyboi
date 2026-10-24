@@ -43,7 +43,7 @@ Respond with ONLY a single JSON object, no prose, no markdown fences:
   "action": "burn" | "airdrop" | "bounty" | "none",
   "params": {
     // burn:    { "amount_lamports": <u64 <= burn_cap> }
-    // airdrop: { "recipients": [<pubkey>...], "amounts": [<u64>...] }   (<= max_recipients, sum <= airdrop_cap)
+    // airdrop: { "favored": [<pubkey>...] }   (0..favored_max, each from favored_candidates; code adds the random picks + equal-split amounts)
     // bounty:  { "to": <pubkey>, "amount_lamports": <u64 <= bounty_cap>, "memo": <string <= 140> }
     // none:    {}
   },
@@ -68,7 +68,8 @@ treasury:
 
 available_actions:            (only those off cooldown; omit the rest)
   burn:    { cap_lamports: <u64> }
-  airdrop: { cap_lamports: <u64>, max_recipients: <int> }
+  airdrop: { cap_lamports: <u64>, recipients: 5, favored_max: 2, pool_size: <int>,
+             favored_candidates: [ { wallet, nickname?, reason?, held_hours, balance_tokens }, ... up to 15 ] }
   bounty:  { cap_lamports: <u64> }
 
 since_last_threshold:
@@ -94,7 +95,7 @@ loyal:
 ## Layer 3 — Handling the Output (Hands service)
 
 1. Parse JSON strictly. On parse failure -> retry once with the error appended; then default to action "none" + a stock sulk line.
-2. Validate: action in available_actions; amounts <= caps; recipient count <= max; all pubkeys appear in briefing; memo length.
+2. Validate: action in available_actions; amounts <= caps; favored count <= favored_max and each favored pubkey is in favored_candidates; code builds the final recipients (<= 5) + equal-split amounts; all other pubkeys appear in briefing; memo length.
 3. On validation failure -> retry once with the specific error; then "none".
 4. On success -> build + sign the Anchor instruction -> submit -> wait for confirmation.
 5. Post narration to Telegram + X with Solscan link to the tx (or, for "none", post narration alone).

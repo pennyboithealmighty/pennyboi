@@ -64,13 +64,19 @@ export interface Decree {
   ts: number;
   kind: "decree" | "prophecy";
   text: string;
-  solscanUrl?: string;
+  solscanUrl?: string; // decree entries: the Solscan tx (only when a tx landed)
+  xPostId?: string; // prophecy entries: the public X status id (site builds the URL)
 }
 
-/** Merge on-chain actions + posted X prophecies into a public decree feed. */
+/**
+ * Merge on-chain actions + posted X prophecies into a public decree feed.
+ * A decree carries its Solscan tx only when a transaction actually landed, so
+ * no-op ("none") narrations stay unlinked; a prophecy carries its public X
+ * status id. Both are public, non-identifying — nothing else leaks.
+ */
 export function buildDecrees(
   actions: Array<{ ts: number; narration: string | null; tx_sig: string | null }>,
-  xposts: Array<{ ts: number; text: string; status: string }>,
+  xposts: Array<{ ts: number; text: string; status: string; x_post_id?: string | null }>,
   limit: number,
   txUrl: (sig: string) => string
 ): Decree[] {
@@ -82,7 +88,9 @@ export function buildDecrees(
   }
   for (const x of xposts) {
     if (x.status !== "posted" || !x.text.trim()) continue;
-    out.push({ ts: x.ts, kind: "prophecy", text: x.text });
+    const entry: Decree = { ts: x.ts, kind: "prophecy", text: x.text };
+    if (x.x_post_id) entry.xPostId = x.x_post_id;
+    out.push(entry);
   }
   return out.sort((a, b) => b.ts - a.ts).slice(0, limit);
 }
