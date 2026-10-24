@@ -18,7 +18,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 
-declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
+declare_id!("4bNohxQ1BzN2zDLHixfgf4vd6dqwbdPddmQZ5eioX8HA");
 
 /// Absolute on-chain ceiling for airdrop recipients. Even a (timelocked) config
 /// update cannot raise `airdrop_max_recipients` above this.
