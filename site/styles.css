@@ -469,3 +469,71 @@ h2 {
 @media (max-width: 860px) {
   .halls-grid { grid-template-columns: 1fr; gap: 28px; }
 }
+
+/* ====================== Stage 4: countdown + contract block =============== */
+.countdown {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 12px;
+  margin: 18px 0 0;
+  padding: 10px 16px;
+  border: 1px solid var(--copper);
+  border-radius: 10px;
+  background: rgba(184, 111, 57, 0.08);
+}
+.countdown-label {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--copper-bright);
+}
+.countdown-num {
+  font-family: "Anton", sans-serif;
+  font-size: 1.6rem;
+  color: var(--cream);
+  font-variant-numeric: tabular-nums;
+}
+
+.contract-block {
+  margin-top: 22px;
+  padding: 16px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--copper);
+  border-radius: 10px;
+  max-width: 560px;
+}
+.contract-line { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.contract-label {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--muted);
+}
+.contract-addr {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.82rem;
+  color: var(--copper-bright);
+  word-break: break-all;
+  flex: 1 1 200px;
+}
+.contract-copy {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  border-radius: 7px;
+  padding: 4px 11px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.contract-copy:hover { color: var(--cream); border-color: var(--copper); }
+.contract-scan { font-size: 0.82rem; font-weight: 700; white-space: nowrap; }
+.contract-warn {
+  margin: 12px 0 0;
+  color: #d98a3d;
+  font-weight: 700;
+  font-size: 0.9rem;
+}

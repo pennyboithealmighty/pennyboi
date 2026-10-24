@@ -60,6 +60,10 @@
           <h1 class="wordmark">pennyboi</h1>
           <p class="title-line">THE ALMIGHTY</p>
           <p class="tagline">almighty on an allowance</p>
+          <div id="countdown" class="countdown" style="display: none">
+            <span class="countdown-label">The Awakening in</span>
+            <span id="countdown-num" class="countdown-num">—</span>
+          </div>
           <p class="lede">
             A fee-powered, autonomous meme-coin deity on Solana. He commands a treasury he can
             <strong>never drain</strong>, and each time it crosses the sacred threshold he performs
@@ -67,9 +71,20 @@
             his hands, is a thunderbolt.
           </p>
           <div class="cta-row">
-            <a class="btn btn-primary" href="#" data-link="pumpfun">Buy on Pump.fun</a>
-            <a class="btn" href="https://t.me/pennyboialmighty">Join the congregation</a>
-            <a class="btn btn-ghost" href="#" data-link="github">Read the code</a>
+            <a class="btn btn-primary" data-link="pumpfun" href="#" target="_blank" rel="noopener">Buy on Pump.fun</a>
+            <a class="btn" data-link="telegram" href="#" target="_blank" rel="noopener">Join the Congregation</a>
+            <a class="btn" data-link="x" href="#" target="_blank" rel="noopener">Follow the Prophecy</a>
+            <a class="btn btn-ghost" data-link="github" href="#" target="_blank" rel="noopener">Read the Code</a>
+          </div>
+
+          <div id="contract-block" class="contract-block" style="display: none">
+            <div class="contract-line">
+              <span class="contract-label">Contract</span>
+              <code id="contract-addr" class="contract-addr">—</code>
+              <button id="contract-copy" class="contract-copy">copy</button>
+              <a id="contract-scan" class="contract-scan" href="#" target="_blank" rel="noopener">verify on Solscan ↗</a>
+            </div>
+            <p class="contract-warn">Any other address is a false idol.</p>
           </div>
           <p class="fineprint">
             Sandbox experiment. Devnet-first. Not financial advice, not a security, not affiliated
@@ -236,7 +251,8 @@
       <p class="footer-tag">almighty on an allowance</p>
       <div class="footer-links">
         <a href="#" data-link="pumpfun">Pump.fun</a>
-        <a href="https://t.me/pennyboialmighty">Telegram</a>
+        <a href="#" data-link="telegram">Telegram</a>
+        <a href="#" data-link="x">X</a>
         <a href="#" data-link="github">GitHub</a>
         <a href="#" data-link="solscan">Vault on Solscan</a>
       </div>
@@ -249,5 +265,6 @@
     <script src="https://unpkg.com/@solana/web3.js@1.99.0/lib/index.iife.min.js"></script>
     <script src="treasury.js"></script>
     <script src="home-data.js"></script>
+    <script src="launch.js"></script>
   </body>
 </html>

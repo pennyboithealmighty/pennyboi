@@ -192,9 +192,9 @@ export function registerPublicApi(app: Express, deps: PublicApiDeps): void {
       programId: envStr("VAULT_PROGRAM_ID"),
       balanceSol: s?.balanceSol ?? null,
       thresholdStep: s?.step ?? null,
-      decrees: db.lastActions(1).length > 0 ? db.lastActions(1)[0]!.ts : null,
-      grudges: db.listGrudges(100).length,
-      loyal: db.listLoyal(100).length,
+      decrees: db.countActions() + db.countPostedXPosts(),
+      grudges: db.countActiveGrudges(),
+      loyal: db.countLoyal(),
     };
   }));
 }

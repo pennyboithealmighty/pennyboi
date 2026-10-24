@@ -187,6 +187,22 @@ export class MemoryDb {
       .all(n) as ActionRow[];
   }
 
+  private count(sql: string): number {
+    return (this.db.prepare(sql).get() as { n: number }).n;
+  }
+  countActions(): number {
+    return this.count(`SELECT COUNT(*) AS n FROM actions`);
+  }
+  countPostedXPosts(): number {
+    return this.count(`SELECT COUNT(*) AS n FROM x_posts WHERE status = 'posted'`);
+  }
+  countActiveGrudges(): number {
+    return this.count(`SELECT COUNT(*) AS n FROM grudges WHERE cleared_ts IS NULL`);
+  }
+  countLoyal(): number {
+    return this.count(`SELECT COUNT(*) AS n FROM loyal`);
+  }
+
   // ---- offerings ----------------------------------------------------------
 
   addOffering(args: {
