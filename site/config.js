@@ -2,7 +2,7 @@
 // live panel on the site reads from here. Served as a plain global (no build).
 window.PENNYBOI_CONFIG = {
   // Chain
-  PROGRAM_ID: "4bNohxQ1BzN2zDLHixfgf4vd6dqwbdPddmQZ5eioX8HA",
+  PROGRAM_ID: "GC7kdK4aEX9YsYSpiZ4VFJDw6Q8MtAPQgqjEjpSnVrac",
   RPC_URL: "https://api.devnet.solana.com",
   NETWORK: "devnet", // "devnet" | "mainnet"
 
