@@ -17,6 +17,7 @@ import {
 import type { Commitment } from "@solana/web3.js";
 import express, { type Request, type Response } from "express";
 import { resolveAirdrop } from "./airdrop-resolve.js";
+import { swapContextFromEnv } from "./burn-swap.js";
 import { executeDecision, type ExecDeps } from "./execute.js";
 import { loadAgentKeypair } from "./keypair.js";
 import { log } from "./log.js";
@@ -35,7 +36,11 @@ function getChain(commitment: Commitment): { vault: LoadedVault; submit: Submitt
   const agent = loadAgentKeypair();
   const loaded = tryLoadVault(connection, new anchor.Wallet(agent));
   if (!loaded.ok) throw new Error(loaded.reason);
-  cached = { vault: loaded.vault, submit: makeSubmitter(loaded.vault, commitment) };
+  // BURN_MODE=swap wiring (docs/13). The mock-venue Program is loaded + passed
+  // here at the post-redeploy dry run; until then the context is null and burns
+  // use the stub (swapContextFromEnv returns null without a venue program).
+  const swap = swapContextFromEnv(connection, null);
+  cached = { vault: loaded.vault, submit: makeSubmitter(loaded.vault, commitment, swap) };
   log.info(`agent ${agent.publicKey.toBase58()} ready for ${loaded.vault.programId.toBase58()}`);
   return cached;
 }
