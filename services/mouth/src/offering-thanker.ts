@@ -32,6 +32,26 @@ function dayKey(now = Date.now()): string {
   return `offering_x_count:${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
 }
 
+/**
+ * The Offerings topic thread id. Prefer the configured id; otherwise use the one
+ * learned from /offer usage (people pitch offerings in that same topic). Returns
+ * undefined only when neither is known (then thanks fall back to General).
+ */
+export function offeringsThreadId(m: MouthCtx): number | undefined {
+  if (m.cfg.topics.offerings != null) return m.cfg.topics.offerings;
+  const learned = Number(m.db.kvGet("offerings_thread_id"));
+  return learned > 1 ? learned : undefined;
+}
+
+/** Thanks text + one "<name> — <sol> SOL · <solscan>" line per named donor. */
+export function composeOfferingThanks(
+  thanksText: string,
+  named: Array<{ display: string; sol: number; solscanUrl: string }>
+): string {
+  const lines = named.map((n) => `${n.display} — ${n.sol.toFixed(3)} SOL · ${n.solscanUrl}`);
+  return lines.length ? `${thanksText}\n\n${lines.join("\n")}` : thanksText;
+}
+
 export class OfferingThanker {
   private cfg: OfferingConfig;
   private running = false;
@@ -107,12 +127,17 @@ export class OfferingThanker {
 
       const thanks = await this.getThanks(input);
 
-      // Telegram: thanks + a Solscan tx link per named donor.
-      const links = (named.length ? named : [lead])
-        .map((r) => solscanTx(this.m.cfg, r.tx_sig))
-        .join("\n");
-      await sendSafe(this.m, `${thanks.telegram}\n\n${links}`, { threadId: this.m.cfg.topics.offerings });
+      // Telegram, in the Offerings topic: thanks + one named line (nickname or
+      // 4+4 short) with a Solscan link per named donor (docs/12 §3).
+      const namedViews = (named.length ? named : [lead]).map((r) => ({
+        display: donorDisplay(r.donor, this.m.db.nicknameOf(r.donor)).display,
+        sol: lamportsToSol(r.lamports),
+        solscanUrl: solscanTx(this.m.cfg, r.tx_sig),
+      }));
+      const message = composeOfferingThanks(thanks.telegram, namedViews);
+      await sendSafe(this.m, message, { threadId: offeringsThreadId(this.m) });
 
+      // Write the final narration back so /public/offering/receipt returns it.
       for (const r of rows) {
         this.m.db.markOfferingAnnounced(r.tx_sig, { tg: true });
         this.m.db.setOfferingNarration(r.tx_sig, thanks.telegram);

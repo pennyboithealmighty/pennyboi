@@ -11,6 +11,8 @@
     "config:request": "tsx config-update.ts request",
     "config:execute": "tsx config-update.ts execute",
     "config:cancel": "tsx config-update.ts cancel",
+    "offer": "tsx offer.ts",
+    "reclassify-offerings": "tsx reclassify-offerings.ts",
     "site-check": "tsx site-check.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

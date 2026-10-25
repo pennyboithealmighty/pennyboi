@@ -555,13 +555,21 @@ export class MemoryDb {
   // ---- offerings / donations (docs/12) ------------------------------------
   // Distinct from the Telegram `offerings` (stunt pitches) methods above.
 
-  /** Record a detected SOL gift. Idempotent by tx_sig; returns true if new. */
-  recordDonation(d: Omit<DonationRow, "announced_tg" | "announced_x" | "narration">): boolean {
+  /**
+   * Record a detected SOL gift. Idempotent by tx_sig; returns true if new.
+   * `silent` pre-marks it announced (tg+x) so a startup backfill of historical
+   * gifts is never posted (docs/12 fix: catch-up must be silent).
+   */
+  recordDonation(
+    d: Omit<DonationRow, "announced_tg" | "announced_x" | "narration">,
+    opts: { silent?: boolean } = {}
+  ): boolean {
+    const a = opts.silent ? 1 : 0;
     const info = this.db
       .prepare(
         `INSERT OR IGNORE INTO donations
-           (tx_sig, ts, slot, donor, lamports, is_creator, reference, memo_raw, memo_clean, tier)
-         VALUES (@tx_sig, @ts, @slot, @donor, @lamports, @is_creator, @reference, @memo_raw, @memo_clean, @tier)`
+           (tx_sig, ts, slot, donor, lamports, is_creator, reference, memo_raw, memo_clean, tier, announced_tg, announced_x)
+         VALUES (@tx_sig, @ts, @slot, @donor, @lamports, @is_creator, @reference, @memo_raw, @memo_clean, @tier, @a, @a)`
       )
       .run({
         tx_sig: d.tx_sig,
@@ -574,8 +582,21 @@ export class MemoryDb {
         memo_raw: d.memo_raw,
         memo_clean: d.memo_clean,
         tier: d.tier,
+        a,
       });
     return info.changes > 0;
+  }
+
+  /** All gifts from one donor (for the mock-fee reclassify migration). */
+  listDonationsByDonor(donor: string): DonationRow[] {
+    return this.db
+      .prepare(`SELECT * FROM donations WHERE donor = ? ORDER BY ts ASC`)
+      .all(donor) as DonationRow[];
+  }
+
+  /** Remove a gift row (used by the one-off reclassify migration). */
+  deleteDonation(txSig: string): void {
+    this.db.prepare(`DELETE FROM donations WHERE tx_sig = ?`).run(txSig);
   }
 
   hasDonation(txSig: string): boolean {
@@ -629,6 +650,35 @@ export class MemoryDb {
       .prepare(`SELECT MAX(ts) AS ts FROM donations WHERE donor = ? AND announced_tg = 1`)
       .get(donor) as { ts: number | null };
     return r?.ts ?? null;
+  }
+
+  /** Public offering feed (docs/12 §4): non-dust gifts, newest first. */
+  recentOfferings(limit = 10): DonationRow[] {
+    return this.db
+      .prepare(`SELECT * FROM donations WHERE tier != 'dust' ORDER BY ts DESC LIMIT ?`)
+      .all(limit) as DonationRow[];
+  }
+
+  /** Public offering stats (docs/12 §4): totals include dust. */
+  offeringStats(now: number): {
+    totalLamports: number;
+    count: number;
+    donors: number;
+    last24hLamports: number;
+    largest: DonationRow | null;
+  } {
+    const agg = this.db
+      .prepare(
+        `SELECT COUNT(*) AS count, COALESCE(SUM(lamports), 0) AS lamports, COUNT(DISTINCT donor) AS donors FROM donations`
+      )
+      .get() as { count: number; lamports: number; donors: number };
+    const last24 = (this.db
+      .prepare(`SELECT COALESCE(SUM(lamports), 0) AS lamports FROM donations WHERE ts >= ?`)
+      .get(now - 86_400) as { lamports: number }).lamports;
+    const largest = (this.db
+      .prepare(`SELECT * FROM donations ORDER BY lamports DESC LIMIT 1`)
+      .get() as DonationRow | undefined) ?? null;
+    return { totalLamports: agg.lamports, count: agg.count, donors: agg.donors, last24hLamports: last24, largest };
   }
 
   /** Offering rollup for the owner digest (docs/12 §3): totals include dust. */

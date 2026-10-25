@@ -77,6 +77,9 @@ export function registerCommands(m: MouthCtx): void {
     if (m.cfg.topics.offerings && thread !== m.cfg.topics.offerings) {
       return c.reply("Offerings belong in #offerings. Take it there.");
     }
+    // Learn the Offerings topic thread so SOL-offering thanks land here too,
+    // even when TELEGRAM_TOPIC_OFFERINGS isn't configured (docs/12 fix).
+    if (thread != null) m.db.kvSet("offerings_thread_id", String(thread));
     const status = await m.chain.treasuryStatus().catch(() => null);
     const step = status?.step ?? 0;
     const handle = c.from?.username ? `@${c.from.username}` : `tg:${c.from?.id}`;

@@ -119,8 +119,18 @@ export interface OfferingWatcherDeps {
   log: Logger;
 }
 
+/**
+ * Backfill cursor: gifts at or before the slot the watcher started on already
+ * existed, so they are recorded SILENTLY (never announced). Only gifts after it
+ * are thanked — this stops a startup catch-up from spamming historical gifts.
+ */
+export function isBackfill(slot: number, startSlot: number | undefined): boolean {
+  return startSlot != null && slot <= startSlot;
+}
+
 export class OfferingWatcher {
   private until: string | undefined;
+  private startSlot: number | undefined;
   private scanning = false;
 
   constructor(private deps: OfferingWatcherDeps) {
@@ -133,6 +143,10 @@ export class OfferingWatcher {
     this.scanning = true;
     let recorded = 0;
     try {
+      // Capture the start cursor once — anything at/before it is a backfill.
+      if (this.startSlot === undefined) {
+        this.startSlot = await this.deps.connection.getSlot().catch(() => 0);
+      }
       const sigs = await this.deps.connection.getSignaturesForAddress(this.deps.feeReceiver, {
         until: this.until,
         limit: 50,
@@ -160,21 +174,27 @@ export class OfferingWatcher {
 
         const tier = tierFor(raw.lamports, this.deps.cfg.minAnnounceLamports, this.deps.cfg.grandLamports);
         const memoClean = sanitizeMemo(raw.memoRaw, this.deps.cfg.memoBlock);
-        const isNew = this.deps.db.recordDonation({
-          tx_sig: raw.txSig,
-          ts: raw.ts,
-          slot: raw.slot,
-          donor: raw.donor,
-          lamports: raw.lamports,
-          is_creator: isCreator ? 1 : 0,
-          reference: raw.reference,
-          memo_raw: raw.memoRaw,
-          memo_clean: memoClean,
-          tier,
-        });
+        const silent = isBackfill(raw.slot, this.startSlot); // backfill → never announced
+        const isNew = this.deps.db.recordDonation(
+          {
+            tx_sig: raw.txSig,
+            ts: raw.ts,
+            slot: raw.slot,
+            donor: raw.donor,
+            lamports: raw.lamports,
+            is_creator: isCreator ? 1 : 0,
+            reference: raw.reference,
+            memo_raw: raw.memoRaw,
+            memo_clean: memoClean,
+            tier,
+          },
+          { silent }
+        );
         if (isNew) {
           recorded += 1;
-          this.deps.log.info(`offering: ${raw.lamports} lamports from ${shortDonor(raw.donor)} [${tier}]`);
+          this.deps.log.info(
+            `offering${silent ? " (backfill, silent)" : ""}: ${raw.lamports} lamports from ${shortDonor(raw.donor)} [${tier}]`
+          );
         }
       }
       this.until = sigs[0]!.signature; // advance to the newest seen

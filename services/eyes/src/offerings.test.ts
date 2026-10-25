@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseOffering } from "./offerings.js";
+import { isBackfill, parseOffering } from "./offerings.js";
 
 const FEE = "FEESPda11111111111111111111111111111111111";
 const DONOR = "Donor1111111111111111111111111111111111111";
@@ -99,4 +99,11 @@ test("parseOffering: blockTime missing -> uses now", () => {
   tx.blockTime = null;
   const r = parseOffering("sigG", tx, FEE, NOW);
   assert.equal(r!.ts, NOW);
+});
+
+test("isBackfill: at/before the start cursor is a silent backfill", () => {
+  assert.equal(isBackfill(100, 150), true); // existed before start -> silent
+  assert.equal(isBackfill(150, 150), true); // exactly the cursor -> silent
+  assert.equal(isBackfill(151, 150), false); // arrived after start -> announce
+  assert.equal(isBackfill(100, undefined), false); // no cursor yet -> not backfill
 });
