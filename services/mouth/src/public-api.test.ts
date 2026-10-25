@@ -1,8 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { shortDonor, type DonationRow } from "@pennyboi/shared";
 import {
   buildDecrees,
   corsOrigin,
+  publicOffering,
   RateLimiter,
   sanitizeMentions,
   sanitizeOfferings,
@@ -88,4 +90,34 @@ test("sanitizeMentions truncates the wallet", () => {
   ]);
   assert.equal(out[0]!.wallet, "Vote11…1111");
   assert.equal(out[0]!.nickname, "THE FAITHFUL");
+});
+
+test("publicOffering: 4+4 short, nickname display, never leaks the full address", () => {
+  const donor = "So11111111111111111111111111111111111111112";
+  const row: DonationRow = {
+    tx_sig: "sigX",
+    ts: 100,
+    slot: 1,
+    donor,
+    lamports: 50_000_000,
+    is_creator: 1,
+    reference: null,
+    memo_raw: "gm ser",
+    memo_clean: "gm ser",
+    tier: "offering",
+    announced_tg: 0,
+    announced_x: 0,
+    narration: null,
+  };
+  const url = "https://solscan.io/tx/sigX?cluster=devnet";
+  const o = publicOffering(row, { nickname: "THE FAITHFUL", solscanUrl: url });
+  assert.equal(o.donor_display, "THE FAITHFUL");
+  assert.equal(o.donor_short, shortDonor(donor));
+  assert.equal(o.is_creator, true);
+  assert.equal(o.sol, 0.05);
+  assert.equal(o.memo_clean, "gm ser");
+  assert.equal(o.solscan_url, url);
+  assert.ok(!("donor" in o), "full donor address must not be exposed");
+  // Without a nickname, display falls back to the 4+4 short form.
+  assert.equal(publicOffering(row, { nickname: null, solscanUrl: url }).donor_display, shortDonor(donor));
 });

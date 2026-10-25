@@ -4,7 +4,7 @@
 // it cannot slow the bot. It NEVER exposes owner data, keys, member/telegram
 // ids, mod logs, or anything from .env.
 
-import { envStr, type MemoryDb } from "@pennyboi/shared";
+import { donorDisplay, lamportsToSol, type DonationRow, type MemoryDb, envStr } from "@pennyboi/shared";
 import type { Express, NextFunction, Request, Response } from "express";
 import type { ChainReader } from "./chain.js";
 import type { MouthConfig } from "./config.js";
@@ -108,6 +108,36 @@ export function sanitizeMentions(
   return rows.map((r) => ({ wallet: truncAddr(r.wallet), nickname: r.nickname, reason: r.reason }));
 }
 
+// ---- Offerings (docs/12 §4) -----------------------------------------------
+
+export interface PublicOffering {
+  ts: number;
+  donor_display: string;
+  donor_short: string;
+  sol: number;
+  tier: string;
+  is_creator: boolean;
+  memo_clean: string | null;
+  tx_sig: string;
+  solscan_url: string;
+}
+
+/** Shape one donation for the public feed. Never leaks the full donor address beyond the 4+4 short form. */
+export function publicOffering(row: DonationRow, opts: { nickname: string | null; solscanUrl: string }): PublicOffering {
+  const { display, short } = donorDisplay(row.donor, opts.nickname);
+  return {
+    ts: row.ts,
+    donor_display: display,
+    donor_short: short,
+    sol: lamportsToSol(row.lamports),
+    tier: row.tier,
+    is_creator: row.is_creator === 1,
+    memo_clean: row.memo_clean,
+    tx_sig: row.tx_sig,
+    solscan_url: opts.solscanUrl,
+  };
+}
+
 // ---- Registration ---------------------------------------------------------
 
 export interface PublicApiDeps {
@@ -206,4 +236,72 @@ export function registerPublicApi(app: Express, deps: PublicApiDeps): void {
       loyal: db.countLoyal(),
     };
   }));
+
+  // ---- Offerings (docs/12 §4). Singular /public/offering/* so it never
+  // collides with the Telegram /public/offerings (stunt pitches) feed. --------
+
+  app.get("/public/offering/list", (req, res) => {
+    const n = clamp(req.query.limit, 10, 25);
+    serveCached(res, "offering:list:" + n, async () =>
+      db.recentOfferings(n).map((row) =>
+        publicOffering(row, { nickname: db.nicknameOf(row.donor), solscanUrl: txUrl(row.tx_sig) })
+      )
+    );
+  });
+
+  app.get("/public/offering/stats", cached("offering:stats", async () => {
+    const s = db.offeringStats(Math.floor(Date.now() / 1000));
+    return {
+      total_sol: Number(( s.totalLamports / 1e9 ).toFixed(6)),
+      count: s.count,
+      donors: s.donors,
+      last_24h_sol: Number(( s.last24hLamports / 1e9 ).toFixed(6)),
+      largest: s.largest
+        ? publicOffering(s.largest, { nickname: db.nicknameOf(s.largest.donor), solscanUrl: txUrl(s.largest.tx_sig) })
+        : null,
+    };
+  }));
+
+  app.get("/public/offering/receipt", async (req: Request, res: Response) => {
+    const sig = typeof req.query.sig === "string" ? req.query.sig : "";
+    const ref = typeof req.query.ref === "string" ? req.query.ref : "";
+    if (!sig && !ref) return res.status(400).json({ ok: false, error: "sig or ref required" });
+    try {
+      const row = sig ? db.getDonation(sig) : db.getDonationByRef(ref);
+      if (row) {
+        return res.json({
+          ok: true,
+          data: {
+            status: "recorded",
+            sol: row.lamports / 1e9,
+            donor_short: publicOffering(row, { nickname: null, solscanUrl: "" }).donor_short,
+            ts: row.ts,
+            tx_sig: row.tx_sig,
+            solscan_url: txUrl(row.tx_sig),
+            narration: row.narration ?? undefined,
+          },
+        });
+      }
+      // Not recorded by Eyes yet. If we have a sig, say whether it's on-chain.
+      const confirmed = sig ? await chain.signatureConfirmed(sig).catch(() => false) : false;
+      return res.json({ ok: true, data: { status: confirmed ? "confirmed" : "pending", tx_sig: sig || undefined } });
+    } catch {
+      return res.status(502).json({ ok: false, error: "the oracle is silent" });
+    }
+  });
+
+  // Blockhash comes from the server's RPC — the Helius key never reaches the
+  // browser. Stricter 30/min-per-IP limit on top of the global /public limit.
+  const prepareLimiter = new RateLimiter(30, 60_000);
+  app.get("/public/offering/prepare", async (req: Request, res: Response) => {
+    const ip = (req.ip || req.socket.remoteAddress || "unknown").toString();
+    if (!prepareLimiter.allow(ip)) return res.status(429).json({ ok: false, error: "rate limited" });
+    try {
+      const p = await chain.prepareOffering();
+      if (!p) return res.status(503).json({ ok: false, error: "vault not deployed" });
+      return res.json({ ok: true, data: { ...p, network: cfg.cluster } });
+    } catch {
+      return res.status(502).json({ ok: false, error: "the oracle is silent" });
+    }
+  });
 }

@@ -51,4 +51,30 @@ export class ChainReader {
       actionsBanked: cfg.actionsAvailable,
     };
   }
+
+  /** Offering prepare (docs/12 §4): FeeReceiver + a fresh blockhash, server-side. */
+  async prepareOffering(): Promise<{
+    recipient: string;
+    recent_blockhash: string;
+    last_valid_block_height: number;
+  } | null> {
+    if (!this.vault) return null;
+    const bh = await this.connection.getLatestBlockhash();
+    return {
+      recipient: this.vault.feesPda.toBase58(),
+      recent_blockhash: bh.blockhash,
+      last_valid_block_height: bh.lastValidBlockHeight,
+    };
+  }
+
+  /** Whether a signature has confirmed/finalized on-chain (for the receipt poll). */
+  async signatureConfirmed(sig: string): Promise<boolean> {
+    try {
+      const st = await this.connection.getSignatureStatus(sig, { searchTransactionHistory: true });
+      const s = st.value?.confirmationStatus;
+      return s === "confirmed" || s === "finalized";
+    } catch {
+      return false;
+    }
+  }
 }
