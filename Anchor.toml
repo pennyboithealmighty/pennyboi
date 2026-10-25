@@ -10,13 +10,19 @@ vault = "4bNohxQ1BzN2zDLHixfgf4vd6dqwbdPddmQZ5eioX8HA"
 
 [programs.localnet]
 vault = "GC7kdK4aEX9YsYSpiZ4VFJDw6Q8MtAPQgqjEjpSnVrac"
+# Test-only mock venues (docs/13 §6). Never deployed to devnet/mainnet.
+mock_venue = "Er4xBs7mvh138XYpZSAEQZfqJJgxSNKxGy6fwjLyFZzj"
+mock_evil_venue = "FFmYCS3uLRH1865Z8ZrWbLtVfS8gTiwfQDYdDApcSimQ"
 
 [provider]
 cluster = "localnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
-test = "tests/node_modules/.bin/ts-mocha -p tests/tsconfig.json -t 1000000 'tests/vault.ts'"
+# vault.ts (banking) and buyback.ts both initialize the singleton Config PDA, so
+# they can't share one validator — run each in its own `anchor test`. Default is
+# the banking suite; set TEST_FILE=tests/buyback.ts for the buyback suite.
+test = "tests/node_modules/.bin/ts-mocha -p tests/tsconfig.json -t 1000000 ${TEST_FILE:-tests/vault.ts}"
 
 [hooks]
 

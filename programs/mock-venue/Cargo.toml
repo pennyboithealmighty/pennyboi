@@ -1,0 +1,27 @@
+[package]
+name = "mock-venue"
+version = "0.1.0"
+description = "Devnet/test-only mock AMM for the vault buyback_burn CPI (docs/13 §6). NEVER on a mainnet whitelist."
+edition = "2021"
+license = "MIT"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "mock_venue"
+
+[features]
+default = []
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
+
+[dependencies]
+anchor-lang = "1.2.1"
+anchor-spl = { version = "1.2.1", features = ["token", "token_2022", "associated_token"] }
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = [
+  'cfg(feature, values("custom-heap", "custom-panic", "anchor-debug"))',
+] }

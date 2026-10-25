@@ -12,13 +12,27 @@
 import * as anchor from "@coral-xyz/anchor";
 import {
   envNum,
+  envStr,
   fetchVaultConfig,
   getConnection,
   solToLamports,
   tryLoadVault,
 } from "@pennyboi/shared";
+import { PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
 import { assertDevnet, loadOrCreateKeypair, log } from "./lib.js";
+
+/** Parse VAULT_VENUE_WHITELIST (comma list, up to 4) into a fixed [Pubkey; 4], zero-padded. */
+function venueWhitelist(): PublicKey[] {
+  const keys = envStr("VAULT_VENUE_WHITELIST")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((s) => new PublicKey(s));
+  if (keys.length > 4) throw new Error("VAULT_VENUE_WHITELIST has more than 4 entries");
+  while (keys.length < 4) keys.push(PublicKey.default);
+  return keys;
+}
 
 function updateParams() {
   return {
@@ -33,6 +47,8 @@ function updateParams() {
     escapeTimelockSecs: new BN(envNum("VAULT_ESCAPE_TIMELOCK_SECS", 72 * 3600)),
     maxBankedActions: envNum("VAULT_MAX_BANKED_ACTIONS", 50),
     idleFloorSecs: new BN(envNum("VAULT_IDLE_FLOOR_SECS", 86400)),
+    venueWhitelist: venueWhitelist(),
+    burnFeeAllowanceLamports: new BN(envNum("VAULT_BURN_FEE_ALLOWANCE_LAMPORTS", 3_000_000)),
   };
 }
 

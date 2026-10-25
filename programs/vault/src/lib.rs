@@ -16,7 +16,11 @@
 //! `anchor keys sync` to rewrite it here and in Anchor.toml.
 
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program::instruction::{AccountMeta, Instruction};
+use anchor_lang::solana_program::program::invoke_signed;
 use anchor_lang::system_program;
+use anchor_spl::associated_token::AssociatedToken;
+use anchor_spl::token_interface::{self, BurnChecked, Mint, TokenAccount, TokenInterface};
 
 declare_id!("GC7kdK4aEX9YsYSpiZ4VFJDw6Q8MtAPQgqjEjpSnVrac");
 
@@ -77,6 +81,9 @@ pub mod vault {
         config.idle_floor_secs = params.idle_floor_secs;
         config.last_action_ts = 0;
 
+        config.venue_whitelist = params.venue_whitelist;
+        config.burn_fee_allowance_lamports = params.burn_fee_allowance_lamports;
+
         config.escape_timelock_secs = params.escape_timelock_secs;
         config.pending_withdraw = None;
         config.pending_config = None;
@@ -132,7 +139,129 @@ pub mod vault {
 
         emit!(Burned {
             sol_spent: amount_lamports,
-            tokens_burned: 0, // v0.1: no swap yet
+            tokens_burned: 0, // v0.1 stub: no swap yet (removed in docs/13 Stage 5)
+            venue: Pubkey::default(),
+            min_tokens_out: 0,
+        });
+        Ok(())
+    }
+
+    /// Permissionless setup: create the Treasury's associated token account for
+    /// `config.token_mint` so `buyback_burn` has somewhere to receive bought
+    /// tokens. The payer funds rent; the ATA is owned by the Treasury PDA.
+    /// (docs/13 §3.7) The `init_if_needed` constraint does the work.
+    pub fn init_treasury_atas(_ctx: Context<InitTreasuryAtas>) -> Result<()> {
+        Ok(())
+    }
+
+    /// B) buyback_burn — buy PENNYBOI on a WHITELISTED venue with up to
+    /// `burn_cap` SOL, then SPL-burn every token received, in one transaction
+    /// (docs/13 §1). The program does not trust the venue's inputs: it measures
+    /// SOL spent and tokens received itself and reverts the whole tx if either
+    /// guard fails, so the Treasury PDA can sign the CPI safely.
+    pub fn buyback_burn<'info>(
+        ctx: Context<'info, BuybackBurn<'info>>,
+        amount_lamports: u64,
+        min_tokens_out: u64,
+        venue_ix_data: Vec<u8>,
+    ) -> Result<()> {
+        let now = Clock::get()?.unix_timestamp;
+
+        // --- gates (identical to the menu) ---
+        {
+            let config = &ctx.accounts.config;
+            require!(config.actions_available > 0, VaultError::ActionNotAvailable);
+            require!(amount_lamports <= config.burn_cap_lamports, VaultError::CapExceeded);
+            require!(min_tokens_out > 0, VaultError::InvalidMinOut);
+            require_cooldown(now, config.last_burn_ts, config.burn_cooldown_secs)?;
+            require!(
+                config.venue_whitelist.contains(&ctx.accounts.venue_program.key()),
+                VaultError::VenueNotWhitelisted
+            );
+        }
+        // The ATA must be for the configured mint (defense in depth; the account
+        // constraint already ties it to `mint`, which is `address = token_mint`).
+        require!(
+            ctx.accounts.treasury_token_ata.mint == ctx.accounts.config.token_mint,
+            VaultError::WrongMint
+        );
+
+        // Never let the venue see the Config or FeeReceiver PDAs. (The Treasury
+        // and its token ATA are the only Treasury-owned accounts it may touch,
+        // and the delta guards below bound what it can do with them.)
+        let config_key = ctx.accounts.config.key();
+        let (fees_key, _) = Pubkey::find_program_address(&[b"fees"], ctx.program_id);
+        for acc in ctx.remaining_accounts.iter() {
+            let k = acc.key();
+            require!(k != config_key && k != fees_key, VaultError::ForbiddenVenueAccount);
+        }
+
+        // --- snapshot before ---
+        let sol_before = ctx.accounts.treasury.lamports();
+        let tok_before = ctx.accounts.treasury_token_ata.amount;
+
+        // --- invoke the venue, signed by the Treasury PDA ---
+        let treasury_key = ctx.accounts.treasury.key();
+        let treasury_bump = ctx.accounts.config.treasury_bump;
+        let seeds: &[&[u8]] = &[b"treasury".as_ref(), &[treasury_bump]];
+        let metas: Vec<AccountMeta> = ctx
+            .remaining_accounts
+            .iter()
+            .map(|a| AccountMeta {
+                pubkey: *a.key,
+                is_signer: a.is_signer || *a.key == treasury_key,
+                is_writable: a.is_writable,
+            })
+            .collect();
+        let ix = Instruction {
+            program_id: ctx.accounts.venue_program.key(),
+            accounts: metas,
+            data: venue_ix_data,
+        };
+        invoke_signed(&ix, ctx.remaining_accounts, &[seeds])?;
+
+        // --- snapshot after + enforce the outcome ---
+        ctx.accounts.treasury_token_ata.reload()?;
+        let sol_after = ctx.accounts.treasury.lamports();
+        let tok_after = ctx.accounts.treasury_token_ata.amount;
+
+        let sol_spent = sol_before.saturating_sub(sol_after);
+        let max_spend = amount_lamports
+            .checked_add(ctx.accounts.config.burn_fee_allowance_lamports)
+            .ok_or(VaultError::MathOverflow)?;
+        require!(sol_spent <= max_spend, VaultError::SwapSpentTooMuch);
+
+        let tokens_received = tok_after
+            .checked_sub(tok_before)
+            .ok_or(VaultError::MathOverflow)?;
+        require!(tokens_received >= min_tokens_out, VaultError::SlippageExceeded);
+
+        // --- burn exactly what was received (stray tokens stay untouched) ---
+        let decimals = ctx.accounts.mint.decimals;
+        let burn_signer = [seeds];
+        let burn_cpi = CpiContext::new_with_signer(
+            ctx.accounts.token_program.key(),
+            BurnChecked {
+                mint: ctx.accounts.mint.to_account_info(),
+                from: ctx.accounts.treasury_token_ata.to_account_info(),
+                authority: ctx.accounts.treasury.to_account_info(),
+            },
+            &burn_signer,
+        );
+        token_interface::burn_checked(burn_cpi, tokens_received, decimals)?;
+
+        // --- counters/cooldown exactly as the menu ---
+        let venue = ctx.accounts.venue_program.key();
+        let config = &mut ctx.accounts.config;
+        config.last_burn_ts = now;
+        config.actions_available = config.actions_available.saturating_sub(1);
+        config.last_action_ts = now;
+
+        emit!(Burned {
+            sol_spent,
+            tokens_burned: tokens_received,
+            venue,
+            min_tokens_out,
         });
         Ok(())
     }
@@ -466,6 +595,10 @@ pub mod vault {
                 .max_banked_actions
                 .unwrap_or(config.max_banked_actions),
             idle_floor_secs: params.idle_floor_secs.unwrap_or(config.idle_floor_secs),
+            venue_whitelist: params.venue_whitelist.unwrap_or(config.venue_whitelist),
+            burn_fee_allowance_lamports: params
+                .burn_fee_allowance_lamports
+                .unwrap_or(config.burn_fee_allowance_lamports),
             unlock_ts: now
                 .checked_add(config.escape_timelock_secs)
                 .ok_or(VaultError::MathOverflow)?,
@@ -509,6 +642,8 @@ pub mod vault {
         config.escape_timelock_secs = pending.escape_timelock_secs;
         config.max_banked_actions = pending.max_banked_actions;
         config.idle_floor_secs = pending.idle_floor_secs;
+        config.venue_whitelist = pending.venue_whitelist;
+        config.burn_fee_allowance_lamports = pending.burn_fee_allowance_lamports;
         config.pending_config = None;
 
         emit!(ConfigUpdated {});
@@ -627,6 +762,68 @@ pub struct Burn<'info> {
 }
 
 #[derive(Accounts)]
+pub struct InitTreasuryAtas<'info> {
+    #[account(seeds = [b"config"], bump = config.bump)]
+    pub config: Account<'info, Config>,
+
+    #[account(mut)]
+    pub payer: Signer<'info>,
+
+    #[account(seeds = [b"treasury"], bump = config.treasury_bump)]
+    pub treasury: SystemAccount<'info>,
+
+    #[account(address = config.token_mint)]
+    pub mint: InterfaceAccount<'info, Mint>,
+
+    #[account(
+        init_if_needed,
+        payer = payer,
+        associated_token::mint = mint,
+        associated_token::authority = treasury,
+        associated_token::token_program = token_program,
+    )]
+    pub treasury_token_ata: InterfaceAccount<'info, TokenAccount>,
+
+    pub token_program: Interface<'info, TokenInterface>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct BuybackBurn<'info> {
+    #[account(mut, seeds = [b"config"], bump = config.bump, has_one = agent)]
+    pub config: Account<'info, Config>,
+
+    pub agent: Signer<'info>,
+
+    #[account(mut, seeds = [b"treasury"], bump = config.treasury_bump)]
+    pub treasury: SystemAccount<'info>,
+
+    /// Treasury-owned ATA for the configured mint; receives + burns the tokens.
+    #[account(
+        mut,
+        associated_token::mint = mint,
+        associated_token::authority = treasury,
+        associated_token::token_program = token_program,
+    )]
+    pub treasury_token_ata: InterfaceAccount<'info, TokenAccount>,
+
+    /// `mut`: burn_checked reduces the mint's supply.
+    #[account(mut, address = config.token_mint)]
+    pub mint: InterfaceAccount<'info, Mint>,
+
+    pub token_program: Interface<'info, TokenInterface>,
+
+    /// CHECK: must be in config.venue_whitelist; validated in the handler. Its
+    /// accounts are passed as remaining_accounts.
+    pub venue_program: UncheckedAccount<'info>,
+
+    pub system_program: Program<'info, System>,
+    // remaining_accounts: the venue's own accounts (buyer = treasury, token
+    // destination = treasury_token_ata, plus the venue's pool accounts).
+}
+
+#[derive(Accounts)]
 pub struct Airdrop<'info> {
     #[account(mut, seeds = [b"config"], bump = config.bump, has_one = agent)]
     pub config: Account<'info, Config>,
@@ -736,6 +933,12 @@ pub struct Config {
     pub idle_floor_secs: i64,
     pub last_action_ts: i64,
 
+    // Buyback-and-burn (docs/13): only these programs may be CPI'd by
+    // buyback_burn (zeroed slots = unused); plus a small allowance over
+    // amount_lamports for ATA rent / venue fees. Both change via the timelock.
+    pub venue_whitelist: [Pubkey; 4],
+    pub burn_fee_allowance_lamports: u64,
+
     pub escape_timelock_secs: i64,
     pub pending_withdraw: Option<PendingWithdraw>,
     pub pending_config: Option<PendingConfig>,
@@ -765,6 +968,8 @@ pub struct PendingConfig {
     pub escape_timelock_secs: i64,
     pub max_banked_actions: u16,
     pub idle_floor_secs: i64,
+    pub venue_whitelist: [Pubkey; 4],
+    pub burn_fee_allowance_lamports: u64,
     pub unlock_ts: i64,
 }
 
@@ -783,6 +988,8 @@ pub struct InitializeParams {
     pub escape_timelock_secs: i64,
     pub max_banked_actions: u16,
     pub idle_floor_secs: i64,
+    pub venue_whitelist: [Pubkey; 4],
+    pub burn_fee_allowance_lamports: u64,
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone)]
@@ -798,6 +1005,8 @@ pub struct ConfigUpdateParams {
     pub escape_timelock_secs: Option<i64>,
     pub max_banked_actions: Option<u16>,
     pub idle_floor_secs: Option<i64>,
+    pub venue_whitelist: Option<[Pubkey; 4]>,
+    pub burn_fee_allowance_lamports: Option<u64>,
 }
 
 // =========================================================================
@@ -822,6 +1031,8 @@ pub struct IdleFloorGranted {
 pub struct Burned {
     pub sol_spent: u64,
     pub tokens_burned: u64,
+    pub venue: Pubkey,       // Pubkey::default() for the v0.1 stub
+    pub min_tokens_out: u64, // 0 for the v0.1 stub
 }
 
 #[event]
@@ -901,4 +1112,16 @@ pub enum VaultError {
     InvalidParams,
     #[msg("A pending action exists; resolve it first.")]
     PendingActionExists,
+    #[msg("Venue program is not in the whitelist.")]
+    VenueNotWhitelisted,
+    #[msg("min_tokens_out must be greater than zero.")]
+    InvalidMinOut,
+    #[msg("A protected PDA was passed to the venue.")]
+    ForbiddenVenueAccount,
+    #[msg("The swap spent more SOL than allowed.")]
+    SwapSpentTooMuch,
+    #[msg("The swap returned fewer tokens than min_tokens_out.")]
+    SlippageExceeded,
+    #[msg("The treasury token account mint does not match config.token_mint.")]
+    WrongMint,
 }

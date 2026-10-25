@@ -121,6 +121,8 @@ describe("vault (banking + idle floor)", () => {
         escapeTimelockSecs: TIMELOCK,
         maxBankedActions: MAX_BANKED,
         idleFloorSecs: IDLE_FLOOR,
+        venueWhitelist: [PublicKey.default, PublicKey.default, PublicKey.default, PublicKey.default],
+        burnFeeAllowanceLamports: new anchor.BN(3_000_000),
       })
       .accountsStrict({
         admin: admin.publicKey,
