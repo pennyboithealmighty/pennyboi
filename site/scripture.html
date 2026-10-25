@@ -43,7 +43,13 @@
           <img src="assets/coin-avatar.png" alt="Pennyboi coin" width="40" height="40" />
           <span>PENNYBOI</span>
         </a>
-        <div class="nav-links">
+        <button class="nav-toggle" id="nav-toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="nav-links">
+          <span class="nav-toggle-bar"></span>
+          <span class="nav-toggle-bar"></span>
+          <span class="nav-toggle-bar"></span>
+        </button>
+        <div class="nav-links" id="nav-links">
+          <a href="index.html#explainer">Witness the Sacred Film</a>
           <a href="index.html#loop">The Loop</a>
           <a href="index.html#allowance">The Allowance</a>
           <a href="scripture.html" class="nav-active">Scripture</a>
@@ -212,5 +218,6 @@
 
     <script src="https://unpkg.com/@solana/web3.js@1.99.0/lib/index.iife.min.js"></script>
     <script src="scripture.js?v=DEV"></script>
+    <script src="nav.js?v=DEV"></script>
   </body>
 </html>
