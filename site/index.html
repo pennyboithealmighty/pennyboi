@@ -49,8 +49,13 @@
           <img src="assets/coin-avatar.png" alt="Pennyboi coin" width="40" height="40" />
           <span>PENNYBOI</span>
         </a>
-        <div class="nav-links">
-          <a href="#explainer">Watch the 60-second explainer</a>
+        <button class="nav-toggle" id="nav-toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="nav-links">
+          <span class="nav-toggle-bar"></span>
+          <span class="nav-toggle-bar"></span>
+          <span class="nav-toggle-bar"></span>
+        </button>
+        <div class="nav-links" id="nav-links">
+          <a href="#explainer">Witness the Sacred Film</a>
           <a href="#loop">The Loop</a>
           <a href="#allowance">The Allowance</a>
           <a href="#harmless">Harmless by design</a>
@@ -154,6 +159,15 @@
         <a id="tp-solscan" href="#" target="_blank" rel="noopener">Verify the program on Solscan</a>
         · <span id="tp-updated" class="tp-meta">connecting…</span>
       </p>
+    </section>
+
+    <!-- ============ OFFERINGS TO THE ALLOWANCE (Stage 4, docs/12) ============ -->
+    <section class="section section-alt offer-allowance" id="offer-allowance" aria-live="polite">
+      <h2>Offerings to the Allowance</h2>
+      <p class="section-lede">Mortals may feed the Divine Allowance directly. Every gift is on-chain, counted toward the sacred thresholds, and remembered.</p>
+      <p class="offer-totals" id="offer-totals">—</p>
+      <div id="offer-list" class="offer-list"><p class="oracle-silent">Summoning the faithful…</p></div>
+      <a id="offer-cta" class="btn btn-primary offer-cta" href="offering.html" hidden>Make an Offering</a>
     </section>
 
     <!-- ================= CREED ================= -->
@@ -298,5 +312,6 @@
     <script src="home-data.js?v=DEV"></script>
     <script src="launch.js?v=DEV"></script>
     <script src="explainer.js?v=DEV"></script>
+    <script src="nav.js?v=DEV"></script>
   </body>
 </html>

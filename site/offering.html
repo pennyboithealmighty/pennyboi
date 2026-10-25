@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Devnet §0: not indexed until mainnet launch. -->
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Make an Offering — Pennyboi</title>
+    <meta name="description" content="Offer SOL to the Divine Allowance. A gift, not an investment." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;600;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css?v=DEV" />
+    <script src="config.js?v=DEV"></script>
+  </head>
+  <body>
+    <div id="net-ribbon" class="net-ribbon" hidden>DEVNET — dry run in progress</div>
+
+    <header class="hero">
+      <nav class="nav">
+        <a class="brand" href="index.html">
+          <img src="assets/coin-avatar.png" alt="Pennyboi coin" width="40" height="40" />
+          <span>PENNYBOI</span>
+        </a>
+        <button class="nav-toggle" id="nav-toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="nav-links">
+          <span class="nav-toggle-bar"></span>
+          <span class="nav-toggle-bar"></span>
+          <span class="nav-toggle-bar"></span>
+        </button>
+        <div class="nav-links" id="nav-links">
+          <a href="index.html#explainer">Witness the Sacred Film</a>
+          <a href="index.html#loop">The Loop</a>
+          <a href="index.html#allowance">The Allowance</a>
+          <a href="scripture.html">Scripture</a>
+          <a href="whitepaper.pdf" target="_blank" rel="noopener">Whitepaper</a>
+        </div>
+      </nav>
+
+      <div class="offer-head">
+        <div id="offer-badge" class="offer-badge offer-badge-devnet">DEVNET — test SOL only</div>
+        <h1 class="offer-title">Mortals, the Divine Allowance accepts tribute.</h1>
+        <p class="offer-sub">
+          A gift to the Allowance is on-chain, counted toward the sacred thresholds, and remembered.
+          It is <strong>not an investment</strong>, is <strong>not refundable</strong>, and
+          <strong>does not earn airdrops</strong>.
+        </p>
+      </div>
+    </header>
+
+    <main class="section offer-main">
+      <!-- 1. One-tap wallet -->
+      <section class="offer-card" aria-labelledby="give-wallet-h">
+        <h2 id="give-wallet-h">Give with your wallet</h2>
+        <p class="offer-card-sub">Phantom, Solflare, or Backpack. One transaction, signed by you.</p>
+
+        <div class="offer-chips" role="group" aria-label="Amount in SOL">
+          <button class="offer-chip" type="button" data-amt="0.01">0.01</button>
+          <button class="offer-chip" type="button" data-amt="0.05">0.05</button>
+          <button class="offer-chip" type="button" data-amt="0.1">0.1</button>
+          <button class="offer-chip" type="button" data-amt="0.5">0.5</button>
+          <label class="offer-custom">
+            <span class="sr-only">Custom amount in SOL</span>
+            <input id="offer-amount" type="number" min="0.001" max="100" step="0.001" placeholder="custom" inputmode="decimal" />
+            <span>SOL</span>
+          </label>
+        </div>
+
+        <label class="offer-whisper">
+          <span>Whisper to Pennyboi <em>(optional, public, filtered)</em></span>
+          <input id="offer-memo" type="text" maxlength="80" placeholder="a word for the god…" />
+        </label>
+
+        <button id="offer-send" class="btn btn-primary offer-send" type="button">Make an Offering</button>
+        <p id="offer-wallet-note" class="offer-note"></p>
+      </section>
+
+      <!-- 2. Solana Pay QR -->
+      <section class="offer-card" aria-labelledby="give-qr-h">
+        <h2 id="give-qr-h">Or scan with your phone</h2>
+        <p class="offer-card-sub">Solana Pay. Pick an amount above, then scan or tap.</p>
+        <div id="offer-qr" class="offer-qr" aria-hidden="true"></div>
+        <a id="offer-qr-link" class="btn offer-qr-link" href="#" hidden>Open in wallet</a>
+      </section>
+
+      <!-- 3. Copy address -->
+      <section class="offer-card" aria-labelledby="give-copy-h">
+        <h2 id="give-copy-h">Or send directly</h2>
+        <p class="offer-card-sub">The FeeReceiver. <strong>Send SOL only. Not tokens.</strong></p>
+        <div class="offer-addr-row">
+          <code id="offer-addr" class="offer-addr">—</code>
+          <button id="offer-copy" class="offer-copy" type="button">copy</button>
+        </div>
+      </section>
+
+      <!-- Receipt -->
+      <section id="offer-receipt" class="offer-receipt" aria-live="polite" aria-atomic="true" hidden></section>
+
+      <p class="offer-safety">
+        Offerings are gifts. They are not investments, are not refundable, and do not earn airdrops.
+        Pennyboi will never DM you, never asks for a seed phrase, and never asks you to connect to sign
+        anything but this transfer.
+      </p>
+    </main>
+
+    <footer class="footer">
+      <img src="assets/coin-avatar.png" alt="" width="48" height="48" />
+      <p class="footer-tag">almighty on an allowance</p>
+      <div class="footer-links">
+        <a href="index.html">Home</a>
+        <a href="scripture.html">Scripture</a>
+        <a href="whitepaper.pdf" target="_blank" rel="noopener">Whitepaper</a>
+      </div>
+      <p class="footer-fine">
+        Run by code, not by a team. Every rule is on-chain and every act has a receipt.
+        Devnet until launch is announced. Nothing here is financial advice.
+      </p>
+    </footer>
+
+    <script src="vendor/web3.iife.min.js"></script>
+    <script src="vendor/qrcode.min.js"></script>
+    <script src="nav.js?v=DEV"></script>
+    <script src="offering.js?v=DEV"></script>
+  </body>
+</html>

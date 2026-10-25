@@ -6,6 +6,12 @@ window.PENNYBOI_CONFIG = {
   RPC_URL: "https://api.devnet.solana.com",
   NETWORK: "devnet", // "devnet" | "mainnet"
 
+  // Offerings (docs/12). FEE_RECEIVER is the vault's Fees PDA — SOL only, never
+  // tokens. OFFERING_PAGE_PUBLIC stays false on devnet: the page works for
+  // testing but the "Make an Offering" button is hidden and the page is noindex.
+  FEE_RECEIVER: "BE9JGfN1sYc4HnHFiEaUKPCntvjz8Hkv7Jk2yehNfiBa",
+  OFFERING_PAGE_PUBLIC: false,
+
   // Public read-only API (Mouth /public/*). Set to the Cloudflare Tunnel URL
   // once it's up; empty => the home-page live panels show "the oracle is silent".
   API_BASE: "https://api.pennyboi.com",

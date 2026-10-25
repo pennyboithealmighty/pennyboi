@@ -94,6 +94,50 @@
     }).join("");
   }
 
+  function timeAgo(ts) {
+    var s = Math.max(0, Math.floor(Date.now() / 1000) - (ts || 0));
+    if (s < 60) return s + "s ago";
+    if (s < 3600) return Math.floor(s / 60) + "m ago";
+    if (s < 86400) return Math.floor(s / 3600) + "h ago";
+    return Math.floor(s / 86400) + "d ago";
+  }
+
+  function renderOfferStats(d) {
+    var e = el("offer-totals");
+    if (!e) return;
+    var sol = Number(d && d.total_sol ? d.total_sol : 0);
+    var n = Number(d && d.donors ? d.donors : 0);
+    e.innerHTML =
+      "<strong>" + esc(sol.toFixed(2)) + " SOL</strong> offered by <strong>" + esc(n) + "</strong> " +
+      (n === 1 ? "mortal" : "mortals");
+  }
+
+  function renderOfferList(rows) {
+    var b = el("offer-list");
+    if (!b) return;
+    if (!rows.length) { silent("offer-list", "No offerings yet. Be the first to feed the Allowance."); return; }
+    b.innerHTML = rows.slice(0, 5).map(function (r) {
+      var who = r.is_creator ? "The Creator" : esc(r.donor_display);
+      var memo = r.memo_clean ? '<span class="offer-memo">“' + esc(r.memo_clean) + '”</span>' : "";
+      var link = r.solscan_url
+        ? '<a href="' + esc(r.solscan_url) + '" target="_blank" rel="noopener">verify ↗</a>'
+        : "";
+      return '<div class="offer-row"><span class="offer-who">' + who + "</span>" +
+        '<span class="offer-amt">' + esc(Number(r.sol).toFixed(3)) + " SOL</span>" +
+        '<span class="offer-when">' + esc(timeAgo(r.ts)) + "</span>" +
+        memo + '<span class="offer-verify">' + link + "</span></div>";
+    }).join("");
+  }
+
+  // "Make an Offering" button is hidden until OFFERING_PAGE_PUBLIC (devnet §0).
+  (function () {
+    var cta = el("offer-cta");
+    if (cta && CFG.OFFERING_PAGE_PUBLIC === true) cta.hidden = false;
+  })();
+
+  get("/public/offering/stats").then(renderOfferStats).catch(function () {});
+  get("/public/offering/list?limit=5").then(renderOfferList).catch(function () { silent("offer-list"); });
+
   get("/public/decrees?limit=4").then(renderDecrees).catch(function () { silent("decrees-body"); });
   get("/public/offerings?limit=10").then(renderOfferings).catch(function () { silent("offerings-body"); });
   get("/public/grudges").then(function (d) { renderHall("grudges-body", d, "He holds no grudges yet. Give it time."); })
