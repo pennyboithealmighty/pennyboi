@@ -111,6 +111,14 @@ export class MemoryDb {
     this.db.prepare(`UPDATE wallets SET nickname = ? WHERE wallet = ?`).run(nickname, wallet);
   }
 
+  /** A wallet's Pennyboi nickname, if one has been coined. */
+  nicknameOf(wallet: string): string | null {
+    const r = this.db.prepare(`SELECT nickname FROM wallets WHERE wallet = ?`).get(wallet) as
+      | { nickname: string | null }
+      | undefined;
+    return r?.nickname ?? null;
+  }
+
   bumpLoyalty(wallet: string, delta: number, now: number): void {
     this.upsertWalletSeen(wallet, now);
     this.db
@@ -597,6 +605,53 @@ export class MemoryDb {
   /** How many gifts this donor has made (for the thanks context). */
   countDonationsByDonor(donor: string): number {
     return (this.db.prepare(`SELECT COUNT(*) AS n FROM donations WHERE donor = ?`).get(donor) as { n: number }).n;
+  }
+
+  /** Non-dust gifts not yet announced in Telegram (oldest first) — the thanks queue. */
+  unannouncedOfferings(limit = 20): DonationRow[] {
+    return this.db
+      .prepare(`SELECT * FROM donations WHERE announced_tg = 0 AND tier != 'dust' ORDER BY ts ASC LIMIT ?`)
+      .all(limit) as DonationRow[];
+  }
+
+  markOfferingAnnounced(txSig: string, which: { tg?: boolean; x?: boolean }): void {
+    if (which.tg) this.db.prepare(`UPDATE donations SET announced_tg = 1 WHERE tx_sig = ?`).run(txSig);
+    if (which.x) this.db.prepare(`UPDATE donations SET announced_x = 1 WHERE tx_sig = ?`).run(txSig);
+  }
+
+  setOfferingNarration(txSig: string, narration: string): void {
+    this.db.prepare(`UPDATE donations SET narration = ? WHERE tx_sig = ?`).run(narration, txSig);
+  }
+
+  /** When this donor was last individually thanked (announced), for the cooldown. */
+  lastThankedTs(donor: string): number | null {
+    const r = this.db
+      .prepare(`SELECT MAX(ts) AS ts FROM donations WHERE donor = ? AND announced_tg = 1`)
+      .get(donor) as { ts: number | null };
+    return r?.ts ?? null;
+  }
+
+  /** Offering rollup for the owner digest (docs/12 §3): totals include dust. */
+  offeringDigest(sinceTs: number): {
+    count: number;
+    lamports: number;
+    largest: DonationRow | null;
+    dustCount: number;
+    droppedMemos: number;
+  } {
+    const agg = this.db
+      .prepare(`SELECT COUNT(*) AS count, COALESCE(SUM(lamports), 0) AS lamports FROM donations WHERE ts >= ?`)
+      .get(sinceTs) as { count: number; lamports: number };
+    const largest = (this.db
+      .prepare(`SELECT * FROM donations WHERE ts >= ? ORDER BY lamports DESC LIMIT 1`)
+      .get(sinceTs) as DonationRow | undefined) ?? null;
+    const dustCount = (this.db
+      .prepare(`SELECT COUNT(*) AS n FROM donations WHERE ts >= ? AND tier = 'dust'`)
+      .get(sinceTs) as { n: number }).n;
+    const droppedMemos = (this.db
+      .prepare(`SELECT COUNT(*) AS n FROM donations WHERE ts >= ? AND memo_raw IS NOT NULL AND memo_clean IS NULL`)
+      .get(sinceTs) as { n: number }).n;
+    return { count: agg.count, lamports: agg.lamports, largest, dustCount, droppedMemos };
   }
 }
 

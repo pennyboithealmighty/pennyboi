@@ -8,6 +8,8 @@ import { envNum, envStr, type Briefing } from "@pennyboi/shared";
 import { anthropicSettings, makeAnthropicCaller } from "./anthropic.js";
 import { decide, type CallLLM } from "./decide.js";
 import { generateProphecy, type ProphecyInput } from "./prophecy.js";
+import { generateThank } from "./thank.js";
+import { fallbackThanks, type ThankInput } from "@pennyboi/shared";
 import { log } from "./log.js";
 
 function getCaller(): CallLLM {
@@ -113,8 +115,28 @@ function main(): void {
     res.json({ ok: true, prophecy: result.prophecy, attempts: result.attempts });
   });
 
+  // Offering thanks (docs/12 §3). Mouth POSTs the offering context; Brain
+  // returns { telegram, x }. Falls back to templates if the LLM key is missing
+  // or the call fails, so thanks are never blocked.
+  app.post("/thank", async (req: Request, res: Response) => {
+    const input = req.body as ThankInput;
+    if (!input || typeof input.sol !== "number" || typeof input.donor_display !== "string") {
+      return res.status(400).json({ ok: false, error: "missing offering input" });
+    }
+    let callLLM: CallLLM;
+    try {
+      callLLM = getCaller();
+    } catch {
+      // No key — still thank them with templates.
+      return res.json({ ok: true, thanks: fallbackThanks(input), fellBack: true });
+    }
+    const result = await generateThank(input, callLLM);
+    log.info(`thank: ${result.fellBack ? "TEMPLATE" : "generated"} (attempts=${result.attempts})`);
+    res.json({ ok: true, thanks: result.thanks, fellBack: result.fellBack });
+  });
+
   app.listen(port, () => {
-    log.info(`brain listening on :${port} (POST /decide, GET /health), model=${settings.model}`);
+    log.info(`brain listening on :${port} (POST /decide, /prophecy, /thank, GET /health), model=${settings.model}`);
     if (!envStr("ANTHROPIC_API_KEY")) {
       log.warn("ANTHROPIC_API_KEY not set — /decide will return 503 until configured.");
     }

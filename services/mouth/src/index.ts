@@ -13,6 +13,7 @@ import type { MouthCtx } from "./deps.js";
 import { log } from "./log.js";
 import { registerModeration } from "./moderation.js";
 import { createNarrateServer } from "./narrate-server.js";
+import { OfferingThanker } from "./offering-thanker.js";
 import { ProphecyScheduler } from "./prophecy-scheduler.js";
 import { ReplyRateLimiter } from "./ratelimit.js";
 import { XPoster } from "./xposter.js";
@@ -51,6 +52,7 @@ async function main(): Promise<void> {
   registerCommands(m);
   registerModeration(m);
   m.prophecy.start(); // no-op when X_MODE=off
+  new OfferingThanker(m).start(); // thank SOL offerings (docs/12)
 
   // HTTP endpoint for Hands narration + health.
   createNarrateServer(m).listen(cfg.httpPort, () => {

@@ -1,5 +1,6 @@
 // Daily sermon in #general + owner digest DM (docs/06 §2E, §7), at DAILY_HOUR.
 
+import { lamportsToSol, shortDonor } from "@pennyboi/shared";
 import { sendSafe } from "./announce.js";
 import type { MouthCtx } from "./deps.js";
 import * as P from "./personality.js";
@@ -25,6 +26,15 @@ async function runDaily(m: MouthCtx): Promise<void> {
   });
   await sendSafe(m, sermon, { threadId: m.cfg.topics.general });
 
+  // Roll the night's dust (small offerings) into a public line (docs/12 §1).
+  const off = m.db.offeringDigest(now - 86_400);
+  if (off.dustCount > 0) {
+    const n = off.dustCount;
+    await sendSafe(m, `${n} small offering${n === 1 ? "" : "s"} arrived in the night. I noticed. I notice everything.`, {
+      threadId: m.cfg.topics.offerings,
+    });
+  }
+
   // Owner digest (private).
   if (m.cfg.ownerId) {
     const dayStart = (() => {
@@ -40,6 +50,10 @@ async function runDaily(m: MouthCtx): Promise<void> {
       `muted ${m.db.mutedCount(now)}, banned ${m.db.bannedCount()}`,
       m.cfg.x.mode !== "off"
         ? `prophecy (${m.cfg.x.mode}): ${m.db.xPostedTodayCount(dayStart)} posted today${rej ? `, last rejection: ${rej.rejection_reason}` : ""}`
+        : null,
+      `offerings (24h): ${off.count}, ${lamportsToSol(off.lamports).toFixed(3)} SOL, dust ${off.dustCount}, memos dropped ${off.droppedMemos}`,
+      off.largest
+        ? `largest offering: ${lamportsToSol(off.largest.lamports).toFixed(3)} SOL from ${shortDonor(off.largest.donor)}`
         : null,
       `quote: "${sermon.slice(0, 120)}"`,
     ]
