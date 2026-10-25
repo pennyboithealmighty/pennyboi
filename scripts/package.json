@@ -13,6 +13,7 @@
     "config:cancel": "tsx config-update.ts cancel",
     "offer": "tsx offer.ts",
     "devnet-token": "tsx devnet-token.ts",
+    "decode-config": "tsx decode-config.ts",
     "reclassify-offerings": "tsx reclassify-offerings.ts",
     "site-check": "tsx site-check.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
