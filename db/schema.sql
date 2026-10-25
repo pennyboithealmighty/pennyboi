@@ -116,6 +116,27 @@ CREATE TABLE IF NOT EXISTS airdrop_rounds (
   tx_sig       TEXT
 );
 
+-- ---- Offerings: SOL gifts to the Allowance (docs/12) ---------------------
+-- Distinct from the Telegram `offerings` table above (stunt pitches / /offer).
+-- One row per on-chain SOL gift detected at the FeeReceiver. Idempotent by sig.
+CREATE TABLE IF NOT EXISTS donations (
+  tx_sig       TEXT PRIMARY KEY,
+  ts           INTEGER NOT NULL,
+  slot         INTEGER,
+  donor        TEXT NOT NULL,
+  lamports     INTEGER NOT NULL,
+  is_creator   INTEGER NOT NULL DEFAULT 0,
+  reference    TEXT,
+  memo_raw     TEXT,
+  memo_clean   TEXT,
+  tier         TEXT NOT NULL,          -- 'dust' | 'offering' | 'grand'
+  announced_tg INTEGER NOT NULL DEFAULT 0,
+  announced_x  INTEGER NOT NULL DEFAULT 0,
+  narration    TEXT
+);
+CREATE INDEX IF NOT EXISTS donations_donor_ts ON donations (donor, ts);
+CREATE INDEX IF NOT EXISTS donations_reference ON donations (reference);
+
 -- ---- X pre-launch "Prophecy" posts (docs/09) ----------------------------
 CREATE TABLE IF NOT EXISTS x_posts (
   id               INTEGER PRIMARY KEY AUTOINCREMENT,

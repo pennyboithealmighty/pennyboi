@@ -45,6 +45,22 @@ export interface ExclusionRow {
   ts: number;
 }
 
+export interface DonationRow {
+  tx_sig: string;
+  ts: number;
+  slot: number | null;
+  donor: string;
+  lamports: number;
+  is_creator: number;
+  reference: string | null;
+  memo_raw: string | null;
+  memo_clean: string | null;
+  tier: string;
+  announced_tg: number;
+  announced_x: number;
+  narration: string | null;
+}
+
 export interface AirdropRoundRow {
   step: number;
   ts: number;
@@ -526,6 +542,61 @@ export class MemoryDb {
       }
     }
     return out;
+  }
+
+  // ---- offerings / donations (docs/12) ------------------------------------
+  // Distinct from the Telegram `offerings` (stunt pitches) methods above.
+
+  /** Record a detected SOL gift. Idempotent by tx_sig; returns true if new. */
+  recordDonation(d: Omit<DonationRow, "announced_tg" | "announced_x" | "narration">): boolean {
+    const info = this.db
+      .prepare(
+        `INSERT OR IGNORE INTO donations
+           (tx_sig, ts, slot, donor, lamports, is_creator, reference, memo_raw, memo_clean, tier)
+         VALUES (@tx_sig, @ts, @slot, @donor, @lamports, @is_creator, @reference, @memo_raw, @memo_clean, @tier)`
+      )
+      .run({
+        tx_sig: d.tx_sig,
+        ts: d.ts,
+        slot: d.slot,
+        donor: d.donor,
+        lamports: d.lamports,
+        is_creator: d.is_creator,
+        reference: d.reference,
+        memo_raw: d.memo_raw,
+        memo_clean: d.memo_clean,
+        tier: d.tier,
+      });
+    return info.changes > 0;
+  }
+
+  hasDonation(txSig: string): boolean {
+    return !!this.db.prepare(`SELECT 1 FROM donations WHERE tx_sig = ?`).get(txSig);
+  }
+
+  getDonation(txSig: string): DonationRow | null {
+    return (this.db.prepare(`SELECT * FROM donations WHERE tx_sig = ?`).get(txSig) as DonationRow | undefined) ?? null;
+  }
+
+  getDonationByRef(reference: string): DonationRow | null {
+    return (
+      (this.db
+        .prepare(`SELECT * FROM donations WHERE reference = ? ORDER BY ts DESC LIMIT 1`)
+        .get(reference) as DonationRow | undefined) ?? null
+    );
+  }
+
+  /** Most recent gift signature (catch-up uses it as `until`). */
+  lastDonationSig(): string | null {
+    const r = this.db.prepare(`SELECT tx_sig FROM donations ORDER BY ts DESC LIMIT 1`).get() as
+      | { tx_sig: string }
+      | undefined;
+    return r?.tx_sig ?? null;
+  }
+
+  /** How many gifts this donor has made (for the thanks context). */
+  countDonationsByDonor(donor: string): number {
+    return (this.db.prepare(`SELECT COUNT(*) AS n FROM donations WHERE donor = ?`).get(donor) as { n: number }).n;
   }
 }
 

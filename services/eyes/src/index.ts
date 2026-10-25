@@ -7,6 +7,7 @@ import { envNum, envStr, getConnection, MemoryDb, tryLoadVault } from "@pennyboi
 import { ActivityWindow } from "./activity.js";
 import { makeHandoff } from "./handoff.js";
 import { log } from "./log.js";
+import { startOfferingWatcher } from "./offerings.js";
 import { startPoller } from "./poller.js";
 import { createServer } from "./server.js";
 import { ThresholdTracker } from "./tracker.js";
@@ -47,6 +48,13 @@ function main(): void {
 
   // Check once at startup (handles a flag already pending a decision).
   void tracker.check();
+
+  // Watch the FeeReceiver for SOL offerings (docs/12). Needs the vault (for the
+  // FeeReceiver PDA + admin/agent) and the DB; silently off until deployed.
+  if (vault && db) {
+    const offeringPoll = envNum("OFFERING_POLL_SECS", pollInterval);
+    void startOfferingWatcher({ connection, vault, db, log, intervalSecs: offeringPoll });
+  }
 
   // Spec: fall back to polling only when no Helius key is configured.
   if (!heliusKey) {
