@@ -53,12 +53,15 @@ test("validateDecision: action not in available_actions", () => {
   assert.ok(errs.some((e) => e.includes("not in available_actions")));
 });
 
+// Fixture: cap 0.1 SOL, pool_size 3, recipients 5 -> 3 wallets at 0.0333 SOL each.
+const FIGURES = "0.0333 SOL each to 3 wallets. Bless.";
+
 test("validateDecision: airdrop favored must be a candidate (zero favored is fine)", () => {
   const b = makeBriefing();
   // BUYER is the lone favored_candidate in the fixture.
   assert.deepEqual(
     validateDecision(
-      { action: "airdrop", params: { favored: [BUYER] }, reasoning: "", narration: "bless" },
+      { action: "airdrop", params: { favored: [BUYER] }, reasoning: "", narration: FIGURES },
       b
     ),
     []
@@ -66,23 +69,37 @@ test("validateDecision: airdrop favored must be a candidate (zero favored is fin
   // Zero favored (let fortune decide all five) is valid.
   assert.deepEqual(
     validateDecision(
-      { action: "airdrop", params: { favored: [] }, reasoning: "", narration: "bless" },
+      { action: "airdrop", params: { favored: [] }, reasoning: "", narration: FIGURES },
       b
     ),
     []
   );
   // SELLER is in the pool-less briefing but NOT a favored_candidate.
   const bad = validateDecision(
-    { action: "airdrop", params: { favored: [SELLER] }, reasoning: "", narration: "bless" },
+    { action: "airdrop", params: { favored: [SELLER] }, reasoning: "", narration: FIGURES },
     b
   );
   assert.ok(bad.some((e) => e.includes("not in favored_candidates")));
 });
 
+test("validateDecision: airdrop narration must state the per-wallet amount and count", () => {
+  const b = makeBriefing();
+  const totalOnly = validateDecision(
+    { action: "airdrop", params: { favored: [] }, reasoning: "", narration: "0.1 SOL to the faithful. Bless." },
+    b
+  );
+  assert.ok(totalOnly.some((e) => e.includes("0.0333 SOL each to 3 wallets")), "total alone is rejected");
+  const noCount = validateDecision(
+    { action: "airdrop", params: { favored: [] }, reasoning: "", narration: "0.0333 SOL each. Bless." },
+    b
+  );
+  assert.ok(noCount.some((e) => e.includes("recipient count")));
+});
+
 test("validateDecision: airdrop rejects too many favored and duplicates", () => {
   const b = makeBriefing();
   const tooMany = validateDecision(
-    { action: "airdrop", params: { favored: [BUYER, BUYER, BUYER] }, reasoning: "", narration: "bless" },
+    { action: "airdrop", params: { favored: [BUYER, BUYER, BUYER] }, reasoning: "", narration: FIGURES },
     b
   );
   assert.ok(tooMany.some((e) => e.includes("max 2")));

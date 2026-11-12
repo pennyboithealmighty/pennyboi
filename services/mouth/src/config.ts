@@ -111,7 +111,8 @@ export function loadMouthConfig(): MouthConfig {
       accessToken: envStr("X_ACCESS_TOKEN"),
       accessSecret: envStr("X_ACCESS_SECRET"),
       prelaunch: {
-        postsPerDay: envNum("X_PRELAUNCH_POSTS_PER_DAY", 3),
+        // One scheduled X post a day (X_PROPHECY_PER_DAY); the old name still works.
+        postsPerDay: envNum("X_PROPHECY_PER_DAY", envNum("X_PRELAUNCH_POSTS_PER_DAY", 1)),
         ...parseHours(envStr("X_PRELAUNCH_HOURS", "09-22")),
         linkRate: envNum("X_PRELAUNCH_LINK_RATE", 0.25),
         launchDate: envStr("X_LAUNCH_DATE"),

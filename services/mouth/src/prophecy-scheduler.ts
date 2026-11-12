@@ -3,8 +3,9 @@
 // applies the link policy, posts to X, and records every outcome. Nothing
 // on-chain/devnet ever reaches X — this path never touches the briefing.
 
-import { envStr, pickMood } from "@pennyboi/shared";
+import { LIMITS, envStr, pickMood, shapeDry } from "@pennyboi/shared";
 import type { MouthCtx } from "./deps.js";
+import { PostGuard, shapeForPublic } from "./public-post.js";
 import {
   planDaySlots,
   rejectProphecy,
@@ -143,8 +144,11 @@ export class ProphecyScheduler {
       return { status: "rejected", text: prophecy.post, theme: prophecy.theme, reason: check.reason };
     }
 
-    // Link policy.
-    let text = prophecy.post;
+    // Dry runs only clamp (no counter/catchphrase persistence); real posts go
+    // through the full public shaping. The link is appended after clamping.
+    let text = dryrun
+      ? shapeDry(prophecy.post, LIMITS.x)
+      : shapeForPublic(this.m.db, prophecy.post, LIMITS.x);
     const dayStart = startOfDayLocal();
     if (
       shouldAppendLink({
@@ -157,6 +161,13 @@ export class ProphecyScheduler {
     }
 
     if (dryrun) return { status: "dryrun", text, theme: prophecy.theme };
+
+    // Hard daily cap on scheduled X posts (decrees are exempt, this isn't one).
+    if (!new PostGuard(this.m.db).tryTake("x", "scheduled")) {
+      this.m.log.warn("prophecy skipped: X public-post cap already reached today");
+      this.m.db.recordXPost({ now, theme: prophecy.theme, mood, text, status: "skipped" });
+      return { status: "skipped", text, theme: prophecy.theme, reason: "x public-post cap" };
+    }
 
     const id = await this.m.x.post(text);
     if (id) {

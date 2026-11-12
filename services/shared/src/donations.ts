@@ -8,6 +8,7 @@
 
 import { envBool, envNum, envStr } from "./env.js";
 import { solToLamports } from "./solana.js";
+import { LIMITS, clampPost, clampSentences, shapeDry } from "./voice.js";
 
 // ---- Classification (docs/12 §1) ------------------------------------------
 
@@ -201,14 +202,24 @@ export function fallbackThanks(i: ThankInput): Thanks {
   else if (i.tier === "grand") base = pick(GRAND_TEMPLATES, seed)(i);
   else base = pick(SINGLE_TEMPLATES, seed)(i);
 
-  // Telegram may quote the (already sanitized) memo; X never does.
+  // Telegram may quote the (already sanitized) memo; X never does. Both are held
+  // to the channel limits (docs: Telegram thanks ≤200, X ≤180).
+  // The quoted memo rides on the last sentence, so the sentence cap applies to
+  // the template alone and the memo is attached after it.
   const memo = i.memo_clean && i.memo_clean.trim() ? ` "${i.memo_clean.trim()}"` : "";
-  return { telegram: `${base}${memo}`.slice(0, 500), x: base.slice(0, 240) };
+  return {
+    telegram: clampPost(`${clampSentences(base)}${memo}`, LIMITS.telegramThanks),
+    x: shapeDry(base, LIMITS.x),
+  };
 }
 
 // ---- Rate / cooldown gating (docs/12 §3) ----------------------------------
 
-/** Whether an offering-thanks may go to X right now. */
+/**
+ * Whether an offering-thanks may go to X right now. Only GRAND offerings earn an
+ * X post, and the daily cap (OFFERING_X_MAX_PER_DAY, default 1) is a hard cap
+ * with no bypass — he speaks once a day unless he does a decree.
+ */
 export function shouldThankOnX(args: {
   mode: "off" | "prelaunch" | "live";
   xInPrelaunch: boolean;
@@ -218,7 +229,7 @@ export function shouldThankOnX(args: {
 }): boolean {
   if (args.mode === "off") return false;
   if (args.mode === "prelaunch" && !args.xInPrelaunch) return false;
-  if (args.tier === "grand") return true; // grand always qualifies (still counted)
+  if (args.tier !== "grand") return false;
   return args.postsToday < args.maxPerDay;
 }
 
@@ -249,7 +260,7 @@ export function offeringConfig(): OfferingConfig {
     minAnnounceLamports: solToLamports(envNum("OFFERING_MIN_ANNOUNCE_SOL", 0.01)),
     grandLamports: solToLamports(envNum("OFFERING_GRAND_SOL", 1)),
     batchSecs: envNum("OFFERING_BATCH_SECS", 120),
-    xMaxPerDay: envNum("OFFERING_X_MAX_PER_DAY", 4),
+    xMaxPerDay: envNum("OFFERING_X_MAX_PER_DAY", 1),
     xInPrelaunch: envBool("OFFERING_X_IN_PRELAUNCH", false),
     donorCooldownSecs: envNum("OFFERING_DONOR_COOLDOWN_SECS", 21_600),
     feeSources: new Set(envList("FEE_SOURCE_WALLETS")),

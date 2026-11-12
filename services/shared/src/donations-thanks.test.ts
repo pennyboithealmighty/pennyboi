@@ -39,17 +39,24 @@ test("fallbackThanks: creator, grand, and batch variants", () => {
   assert.ok(!LINKISH.test(b.x));
 });
 
-test("shouldThankOnX: mode + prelaunch gate + daily cap + grand rule", () => {
+test("shouldThankOnX: grand-only, hard daily cap, mode + prelaunch gates", () => {
   const g = (o: Partial<Parameters<typeof shouldThankOnX>[0]>) =>
-    shouldThankOnX({ mode: "live", xInPrelaunch: false, tier: "offering", postsToday: 0, maxPerDay: 4, ...o });
+    shouldThankOnX({ mode: "live", xInPrelaunch: false, tier: "grand", postsToday: 0, maxPerDay: 1, ...o });
 
   assert.equal(g({ mode: "off" }), false);
-  assert.equal(g({ mode: "prelaunch", xInPrelaunch: false }), false);
+  assert.equal(g({ mode: "prelaunch", xInPrelaunch: false }), false); // prelaunch gate wins even for grand
   assert.equal(g({ mode: "prelaunch", xInPrelaunch: true }), true);
-  assert.equal(g({ mode: "live", postsToday: 3, maxPerDay: 4 }), true);
-  assert.equal(g({ mode: "live", postsToday: 4, maxPerDay: 4 }), false); // at cap
-  assert.equal(g({ mode: "live", postsToday: 10, maxPerDay: 4, tier: "grand" }), true); // grand bypasses cap
-  assert.equal(g({ mode: "prelaunch", xInPrelaunch: false, tier: "grand" }), false); // but prelaunch gate still wins
+  assert.equal(g({ tier: "offering" }), false); // only grand earns an X post
+  assert.equal(g({ tier: "dust" }), false);
+  assert.equal(g({ postsToday: 0, maxPerDay: 1 }), true);
+  assert.equal(g({ postsToday: 1, maxPerDay: 1 }), false); // hard cap, no grand bypass
+});
+
+test("fallbackThanks respects the channel limits (TG ≤200, X ≤180)", () => {
+  const long = "x".repeat(70);
+  const t = fallbackThanks(base({ memo_clean: long, donor_display: "7xKq…9fPa" }));
+  assert.ok(t.telegram.length <= 200, `tg ${t.telegram.length}`);
+  assert.ok(t.x.length <= 180, `x ${t.x.length}`);
 });
 
 test("foldByCooldown: one named row per eligible donor; rest folded", () => {

@@ -21,9 +21,11 @@ import {
   type ThankInput,
   type Thanks,
 } from "@pennyboi/shared";
+import { LIMITS, shapeDry } from "@pennyboi/shared";
 import { sendSafe } from "./announce.js";
 import type { MouthCtx } from "./deps.js";
 import { solscanTx } from "./links.js";
+import { shapeForPublic } from "./public-post.js";
 
 const TIER_RANK: Record<DonationTier, number> = { dust: 0, offering: 1, grand: 2 };
 
@@ -134,7 +136,9 @@ export class OfferingThanker {
         sol: lamportsToSol(r.lamports),
         solscanUrl: solscanTx(this.m.cfg, r.tx_sig),
       }));
-      const message = composeOfferingThanks(thanks.telegram, namedViews);
+      // Clamp + throttle the thanks line (≤200); the per-donor link lines don't count.
+      const shaped = shapeForPublic(this.m.db, thanks.telegram, LIMITS.telegramThanks);
+      const message = composeOfferingThanks(shaped, namedViews);
       await sendSafe(this.m, message, { threadId: offeringsThreadId(this.m) });
 
       // Write the final narration back so /public/offering/receipt returns it.
@@ -153,7 +157,7 @@ export class OfferingThanker {
           maxPerDay: this.cfg.xMaxPerDay,
         })
       ) {
-        const id = await this.m.x.post(thanks.x);
+        const id = await this.m.x.post(shapeDry(thanks.x, LIMITS.x));
         if (id) {
           this.bumpXToday();
           for (const r of rows) this.m.db.markOfferingAnnounced(r.tx_sig, { x: true });

@@ -16,7 +16,7 @@ export const PROPHECY_THEMES = [
 ] as const;
 export type ProphecyTheme = (typeof PROPHECY_THEMES)[number];
 
-export const PROPHECY_MAX = 240;
+export const PROPHECY_MAX = 180; // X limit: short, punchy, at most 2 sentences
 
 export interface ProphecyInput {
   mood: string;
@@ -52,7 +52,7 @@ export interface Prophecy {
 
 export function renderProphecyBriefing(i: ProphecyInput): string {
   const lines: string[] = [];
-  lines.push("PROPHECY MODE. You have not yet awakened on-chain. Speak to the mortals of X about yourself and what is coming. One post, <= 240 chars.");
+  lines.push(`PROPHECY MODE. You have not yet awakened on-chain. Speak to the mortals of X about yourself and what is coming. One post: at most 2 sentences, <= ${PROPHECY_MAX} chars, punchy.`);
   lines.push("");
   lines.push(`mood: ${i.mood}`);
   if (i.daysUntilAwakening !== undefined && i.daysUntilAwakening !== null) {
@@ -73,7 +73,7 @@ export function renderProphecyBriefing(i: ProphecyInput): string {
     lines.push(`- Do NOT use these exact phrases in this post: ${i.avoidPhrases.map((p) => `"${p}"`).join(", ")}.`);
   }
   lines.push("");
-  lines.push('Respond with ONLY a single JSON object: { "post": "<text <= 240 chars>", "theme": "<theme used>", "reasoning": "<private>" }');
+  lines.push(`Respond with ONLY a single JSON object: { "post": "<text <= ${PROPHECY_MAX} chars>", "theme": "<theme used>", "reasoning": "<private>" }`);
   return lines.join("\n");
 }
 

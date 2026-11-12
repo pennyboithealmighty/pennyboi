@@ -1,8 +1,15 @@
 // Outbound messaging. Every message Pennyboi sends goes through sendSafe, which
-// strips any link that isn't on the allowlist (docs/06 §8). Threshold/action
-// announcements land in #general and mirror to X.
+// strips any link that isn't on the allowlist (docs/06 §8).
+//
+// Public-post discipline: only a DECREE — an on-chain act that actually
+// executed — is announced, immediately, in #general (and on X when live). A
+// "none" decision, or a failed/paused/invalid attempt, is logged and shows up in
+// the owner digest only. Decrees are clamped to the channel limit and the
+// catchphrases are throttled; the Solscan link is appended after clamping.
 
+import { LIMITS, shapeDry } from "@pennyboi/shared";
 import type { MouthCtx } from "./deps.js";
+import { shapeForPublic } from "./public-post.js";
 import { stripDisallowedUrls } from "./sanitize.js";
 
 /** Send to a topic (or the group root), with the outbound URL filter applied. */
@@ -33,16 +40,26 @@ export interface AnnounceInput {
   solscanUrl?: string;
 }
 
-/** Announce a completed (or skipped/failed) action in #general + on X. */
+/** Only on-chain acts that actually executed are announced publicly. */
+export function isExecutedDecree(action: string, status: string): boolean {
+  return status === "submitted" && action !== "none";
+}
+
+/** Announce an executed decree in #general + on X (live only). Silent otherwise. */
 export async function announce(ctx: MouthCtx, a: AnnounceInput): Promise<void> {
-  let text = a.narration?.trim() || "...";
-  if (a.solscanUrl) text += `\n\n${a.solscanUrl}`;
+  if (!isExecutedDecree(a.action, a.status)) return;
 
-  await sendSafe(ctx, text, { threadId: ctx.cfg.topics.general });
+  // Shape once (clamp + catchphrase throttle, counter advanced once per decree);
+  // X reuses the shaped text at its own limit. Links are not counted.
+  const tg = shapeForPublic(ctx.db, a.narration.trim() || "...", LIMITS.telegramDecree);
+  await sendSafe(ctx, a.solscanUrl ? `${tg}\n\n${a.solscanUrl}` : tg, {
+    threadId: ctx.cfg.topics.general,
+  });
 
-  // Mirror to X only in live mode. In prelaunch/off, threshold news stays
-  // Telegram-only — nothing on-chain/devnet ever reaches X (docs/09 §1).
+  // Mirror to X only in live mode. In prelaunch/off, nothing on-chain/devnet
+  // ever reaches X (docs/09 §1).
   if (ctx.cfg.x.mode === "live") {
-    await ctx.x.post(a.solscanUrl ? `${a.narration}\n${a.solscanUrl}` : a.narration);
+    const x = shapeDry(tg, LIMITS.x);
+    await ctx.x.post(a.solscanUrl ? `${x}\n${a.solscanUrl}` : x);
   }
 }

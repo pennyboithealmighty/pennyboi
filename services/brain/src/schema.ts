@@ -2,9 +2,10 @@
 // briefing (docs/04). Hands re-validates against on-chain truth before signing;
 // this is the first line of defense.
 
-import type { Briefing } from "@pennyboi/shared";
+import { airdropFigures, type Briefing } from "@pennyboi/shared";
 
-export const NARRATION_MAX = 280;
+// Telegram decree limit (the Solscan link is appended separately, not counted).
+export const NARRATION_MAX = 200;
 export const MEMO_MAX = 140;
 
 export type ActionKind = "burn" | "airdrop" | "bounty" | "none";
@@ -144,6 +145,14 @@ export function validateDecision(d: Decision, b: Briefing): string[] {
           errs.push(`airdrop favored "${w}" is duplicated`);
         }
         seen.add(w);
+      }
+      // The narration must state the real per-wallet amount and recipient
+      // count ("0.02 SOL each to 5 wallets"), never the total alone.
+      const fig = airdropFigures(avail.airdrop);
+      if (!d.narration.includes(`${fig.perWalletSol} SOL`)) {
+        errs.push(`airdrop narration must state "${fig.perWalletSol} SOL each to ${fig.wallets} wallets"`);
+      } else if (!new RegExp(`\\b${fig.wallets}\\b`).test(d.narration)) {
+        errs.push(`airdrop narration must state the recipient count: "${fig.wallets} wallets"`);
       }
       break;
     }

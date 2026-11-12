@@ -1,9 +1,9 @@
 // Daily sermon in #general + owner digest DM (docs/06 §2E, §7), at DAILY_HOUR.
 
-import { lamportsToSol, shortDonor } from "@pennyboi/shared";
+import { LIMITS, lamportsToSol, sermonText, shortDonor } from "@pennyboi/shared";
 import { sendSafe } from "./announce.js";
 import type { MouthCtx } from "./deps.js";
-import * as P from "./personality.js";
+import { PostGuard, shapeForPublic } from "./public-post.js";
 
 function msUntilNextHour(hour: number, now = new Date()): number {
   const next = new Date(now);
@@ -14,25 +14,25 @@ function msUntilNextHour(hour: number, now = new Date()): number {
 
 async function runDaily(m: MouthCtx): Promise<void> {
   const s = await m.chain.treasuryStatus().catch(() => null);
-  const actions = m.db.lastActions(10);
   const now = Math.floor(Date.now() / 1000);
-  const actionsToday = actions.filter((a) => now - a.ts < 86_400).length;
+  const recent = m.db.lastActions(50).filter((a) => now - a.ts < 86_400);
+  const deedsToday = recent.filter((a) => a.action !== "none" && a.tx_sig).length;
+  const noneToday = recent.filter((a) => a.action === "none").length;
+  const off = m.db.offeringDigest(now - 86_400);
 
-  // Public sermon.
-  const sermon = P.sermon({
+  // The ONE scheduled Telegram post of the day: the sermon, with the night's
+  // dust offerings folded in (no separate post), under the hard daily cap.
+  const guard = new PostGuard(m.db);
+  const sermon = sermonText({
     balanceSol: s?.balanceSol ?? 0,
     step: s?.step ?? 0,
-    actionsToday,
+    deedsToday,
+    dustCount: off.dustCount,
   });
-  await sendSafe(m, sermon, { threadId: m.cfg.topics.general });
-
-  // Roll the night's dust (small offerings) into a public line (docs/12 §1).
-  const off = m.db.offeringDigest(now - 86_400);
-  if (off.dustCount > 0) {
-    const n = off.dustCount;
-    await sendSafe(m, `${n} small offering${n === 1 ? "" : "s"} arrived in the night. I noticed. I notice everything.`, {
-      threadId: m.cfg.topics.offerings,
-    });
+  if (guard.tryTake("telegram", "scheduled")) {
+    await sendSafe(m, shapeForPublic(m.db, sermon, LIMITS.sermon), { threadId: m.cfg.topics.general });
+  } else {
+    m.log.warn("daily sermon skipped: telegram public-post cap already reached today");
   }
 
   // Owner digest (private).
@@ -46,7 +46,8 @@ async function runDaily(m: MouthCtx): Promise<void> {
     const digest = [
       "DAILY DIGEST",
       s ? `treasury ${s.balanceSol.toFixed(4)} SOL, step ${s.step}` : "treasury: (not deployed)",
-      `actions (24h): ${actionsToday}`,
+      `deeds executed (24h): ${deedsToday}`,
+      `silent "none" decisions (24h): ${noneToday}`,
       `muted ${m.db.mutedCount(now)}, banned ${m.db.bannedCount()}`,
       m.cfg.x.mode !== "off"
         ? `prophecy (${m.cfg.x.mode}): ${m.db.xPostedTodayCount(dayStart)} posted today${rej ? `, last rejection: ${rej.rejection_reason}` : ""}`

@@ -4,7 +4,7 @@
 
 import { extractMemory, type Briefing } from "@pennyboi/shared";
 import express, { type Express, type Request, type Response } from "express";
-import { announce } from "./announce.js";
+import { announce, isExecutedDecree } from "./announce.js";
 import type { MouthCtx } from "./deps.js";
 import { registerPublicApi } from "./public-api.js";
 
@@ -45,13 +45,19 @@ export function createNarrateServer(m: MouthCtx): Express {
     const status = b.result?.status ?? "narrated";
     const now = Math.floor(Date.now() / 1000);
 
-    await announce(m, {
-      narration,
-      action,
-      status,
-      signature: b.result?.signature,
-      solscanUrl: b.result?.solscanUrl,
-    });
+    // Only an executed decree speaks publicly. "none" (and failed/paused/invalid
+    // attempts) stay silent: recorded below, surfaced in the owner digest only.
+    if (isExecutedDecree(action, status)) {
+      await announce(m, {
+        narration,
+        action,
+        status,
+        signature: b.result?.signature,
+        solscanUrl: b.result?.solscanUrl,
+      });
+    } else {
+      m.log.info(`silent (${action}/${status}): ${narration.slice(0, 100)}`);
+    }
 
     // Record the action row (full fields when the briefing is present).
     m.db.recordAction({

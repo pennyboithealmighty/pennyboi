@@ -64,7 +64,7 @@ test("falls back when the LLM call throws both times", async () => {
 
 test("accepts a valid airdrop favoring a candidate wallet", async () => {
   const { call } = scripted([
-    `{"action":"airdrop","params":{"favored":["${BUYER}"]},"reasoning":"loyal","narration":"Two I chose. Three the chain chose for me."}`,
+    `{"action":"airdrop","params":{"favored":["${BUYER}"]},"reasoning":"loyal","narration":"0.0333 SOL each to 3 wallets. One I chose; the chain chose the rest."}`,
   ]);
   const res = await decide({ briefing: makeBriefing(), callLLM: call });
   assert.equal(res.fellBack, false);

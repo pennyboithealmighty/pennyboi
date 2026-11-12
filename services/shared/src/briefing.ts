@@ -2,7 +2,38 @@
 // seed, and a renderer that turns the structured briefing into the user-message
 // text the Brain receives.
 
+import { lamportsToSol } from "./solana.js";
 import type { AvailableActions } from "./vault.js";
+
+/**
+ * The exact airdrop figures the narration must state (docs/11 §2 equal split):
+ * wallets = min(pool_size, recipients), per-wallet = floor(cap / wallets).
+ */
+export function airdropFigures(a: {
+  cap_lamports: number;
+  recipients?: number;
+  pool_size?: number;
+}): { wallets: number; perWalletSol: string } {
+  const slots = a.recipients ?? 5;
+  const wallets = Math.max(1, Math.min(a.pool_size ?? slots, slots));
+  const perWalletSol = lamportsToSol(Math.floor(a.cap_lamports / wallets))
+    .toFixed(4)
+    .replace(/\.?0+$/, "");
+  return { wallets, perWalletSol };
+}
+
+/** Rotating opening structure for airdrop narrations, keyed by threshold step. */
+export const AIRDROP_LEADS = [
+  "the amount each wallet receives",
+  "the fortune picks the chain drew",
+  "a taunt at a seller from the briefing",
+  "your favored pick and why you chose them",
+  "how many wallets are blessed",
+] as const;
+
+export function airdropLead(step: number): string {
+  return AIRDROP_LEADS[Math.abs(step) % AIRDROP_LEADS.length]!;
+}
 
 export const MOODS = [
   "greedy",
@@ -100,6 +131,11 @@ export function renderBriefing(b: Briefing): string {
       for (const c of a.favored_candidates ?? []) {
         lines.push(`      - ${JSON.stringify(c)}`);
       }
+      const fig = airdropFigures(a);
+      lines.push(
+        `    per_wallet_sol: ${fig.perWalletSol}, wallets: ${fig.wallets}   (narration MUST say "${fig.perWalletSol} SOL each to ${fig.wallets} wallets")`
+      );
+      lines.push(`    narration_lead: open with ${airdropLead(b.treasury.threshold_step)}`);
     } else {
       lines.push(`  airdrop: { cap_lamports: ${a.cap_lamports}, max_recipients: ${a.max_recipients} }`);
     }
