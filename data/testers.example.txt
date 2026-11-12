@@ -1,0 +1,8 @@
+# Copy this file to data/testers.devnet.txt (gitignored) and list one PUBLIC
+# devnet address per line. Blank lines and "#" comments are ignored.
+# Never put a private key or seed phrase here.
+#
+# The list is only read when TESTER_AIRDROPS_ENABLED=true, SOLANA_CLUSTER=devnet
+# and the RPC's genesis hash is devnet's. It can never apply on mainnet.
+#
+#   7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU   # alice

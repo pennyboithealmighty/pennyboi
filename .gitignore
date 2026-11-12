@@ -45,3 +45,6 @@ coverage/
 .env*
 !.env.example
 .en
+
+# ---- Devnet tester wallets (public addresses, but private to the test group) ----
+data/testers.devnet.txt

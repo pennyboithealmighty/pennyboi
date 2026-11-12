@@ -8,8 +8,12 @@ import {
   airdropConfig,
   buildEligiblePool,
   computeSeed,
+  loadDevnetTesters,
   loadMockHolders,
   repoRoot,
+  testerPoolExclusive,
+  testersAsHolders,
+  withTesters,
   type AvailableActions,
   type FavoredCandidate,
   type LoadedVault,
@@ -105,10 +109,28 @@ export async function buildAirdropPool(
   }
 
   // Holders + exclusions (protocol accounts + fixture flags + DB /exclude list).
-  const { holders, exclusions: fixtureEx } = loadMockHolders(
+  const { holders: mockHolders, exclusions: fixtureEx } = loadMockHolders(
     join(repoRoot(), "db", "mock-holders.json"),
     nowSecs
   );
+
+  // TESTER_AIRDROPS_ENABLED: real devnet wallets from a gitignored file join
+  // the pool. The loader refuses unless the chain itself is devnet, so this
+  // can never apply on mainnet; a refusal just leaves the pool as it was.
+  let holders = mockHolders;
+  const testers = await loadDevnetTesters({ getGenesisHash: () => connection.getGenesisHash() });
+  if (testers.ok) {
+    if (testers.invalid.length > 0) {
+      log.warn(`tester list: ${testers.invalid.length} line(s) are not valid addresses and were ignored`);
+    }
+    const exclusive = testerPoolExclusive();
+    holders = withTesters(mockHolders, testersAsHolders(testers.wallets, nowSecs, acfg), exclusive);
+    log.info(
+      `tester list: ${testers.wallets.length} devnet tester wallet(s) ${exclusive ? "ARE the pool (exclusive)" : "added to the pool"}`
+    );
+  } else if (testers.reason !== "disabled") {
+    log.warn(`tester list NOT loaded: ${testers.reason}`);
+  }
   const exclusions = new Set<string>([
     ...staticExclusions(cfg, vault),
     ...fixtureEx,
