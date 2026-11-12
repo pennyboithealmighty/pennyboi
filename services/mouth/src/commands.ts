@@ -197,13 +197,30 @@ export function registerCommands(m: MouthCtx): void {
   bot.command("ids", async (c) => {
     if (!isOwner(c, m)) return; // silent for everyone else
     const thread = c.message?.message_thread_id;
+
+    // "/ids offerings" or "/ids scripture", sent INSIDE that topic, tells me
+    // which thread it is. I store it and use it at once: no .env edit, no
+    // restart. (A TELEGRAM_TOPIC_* value in .env still wins if set.)
+    const name = argText(c).toLowerCase();
+    let saved = "";
+    if (name === "offerings" || name === "scripture") {
+      if (c.chat.id === m.cfg.chatId && thread != null && thread > 1) {
+        m.db.kvSet(`${name}_thread_id`, String(thread));
+        m.log.info(`topics: #${name} is thread ${thread} (set by the owner with /ids)`);
+        saved = `Remembered: this topic is #${name} (thread ${thread}). In use from now on.`;
+      } else {
+        saved = `Send "/ids ${name}" inside the #${name} topic itself (not General, not a private chat).`;
+      }
+    }
+
     return c.reply(
       [
         `chat_id: ${c.chat.id}`,
         `this topic's thread id: ${thread ?? "(none — this is General/root)"}`,
         "",
-        "Run /ids inside #general, #offerings and #scripture to collect each id, then fill .env:",
-        "TELEGRAM_CHAT_ID, TELEGRAM_TOPIC_GENERAL, TELEGRAM_TOPIC_OFFERINGS, TELEGRAM_TOPIC_SCRIPTURE",
+        'Send "/ids offerings" inside #offerings and "/ids scripture" inside #scripture and I will remember each topic myself.',
+        "Or fill .env and restart: TELEGRAM_CHAT_ID, TELEGRAM_TOPIC_GENERAL, TELEGRAM_TOPIC_OFFERINGS, TELEGRAM_TOPIC_SCRIPTURE",
+        ...(saved ? ["", saved] : []),
       ].join("\n")
     );
   });
