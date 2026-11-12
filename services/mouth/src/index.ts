@@ -18,6 +18,7 @@ import { OfferingThanker } from "./offering-thanker.js";
 import { ProphecyScheduler } from "./prophecy-scheduler.js";
 import { ReplyRateLimiter } from "./ratelimit.js";
 import { registerUniqueWelcome } from "./tg-welcome.js";
+import { registerWelcomeClip } from "./welcome-clip.js";
 import { XMentionsClient } from "./x-mentions-client.js";
 import { XPoster } from "./xposter.js";
 
@@ -53,6 +54,7 @@ async function main(): Promise<void> {
 
   bot.catch((err) => log.error("bot error", err.error));
   registerCommands(m);
+  registerWelcomeClip(m); // before the two below: takes the join event when TG_WELCOME_CLIP_ENABLED
   registerUniqueWelcome(m); // before moderation: takes the join event when TG_UNIQUE_WELCOME_ENABLED
   registerModeration(m);
   m.prophecy.start(); // no-op when X_MODE=off
