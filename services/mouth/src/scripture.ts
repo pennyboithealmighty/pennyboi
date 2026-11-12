@@ -37,25 +37,9 @@ export function scriptureText(cfg: MouthConfig, programId = envStr("VAULT_PROGRA
   return stripDisallowedUrls(text, cfg.allowedHosts);
 }
 
-/**
- * The scripture carries no link preview. Telegram's preview of the Solscan
- * link ignores ?cluster=devnet and shows a card for mainnet (0 SOL), which is
- * wrong and misleading. The links themselves stay clickable.
- */
-export const NO_PREVIEW = { is_disabled: true } as const;
-
 export interface ScriptureApi {
-  sendMessage(
-    chatId: number,
-    text: string,
-    other: { message_thread_id?: number; link_preview_options: { is_disabled: boolean } }
-  ): Promise<{ message_id: number }>;
-  editMessageText(
-    chatId: number,
-    messageId: number,
-    text: string,
-    other: { link_preview_options: { is_disabled: boolean } }
-  ): Promise<unknown>;
+  sendMessage(chatId: number, text: string, other: { message_thread_id?: number }): Promise<{ message_id: number }>;
+  editMessageText(chatId: number, messageId: number, text: string): Promise<unknown>;
   pinChatMessage(chatId: number, messageId: number, other?: { disable_notification?: boolean }): Promise<unknown>;
   unpinChatMessage(chatId: number, messageId: number): Promise<unknown>;
   deleteMessage(chatId: number, messageId: number): Promise<unknown>;
@@ -83,8 +67,7 @@ export async function postScripture(deps: {
 
   if (existing > 0) {
     try {
-      // Editing with the preview off also removes a card the old post showed.
-      await api.editMessageText(chatId, existing, text, { link_preview_options: NO_PREVIEW });
+      await api.editMessageText(chatId, existing, text);
     } catch (e) {
       // Identical text is not an error for us; anything else means the old
       // message is gone or cannot be edited, so a new one is posted below.
@@ -102,8 +85,7 @@ export async function postScripture(deps: {
   async function postNew(old: number): Promise<ScriptureResult> {
     let id: number;
     try {
-      id = (await api.sendMessage(chatId, text, { message_thread_id: threadId, link_preview_options: NO_PREVIEW }))
-        .message_id;
+      id = (await api.sendMessage(chatId, text, { message_thread_id: threadId })).message_id;
     } catch (e) {
       return { ok: false, error: `could not post in the scripture topic: ${describe(e)}` };
     }
