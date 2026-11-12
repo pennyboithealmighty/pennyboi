@@ -13,7 +13,7 @@ Every lamport sent to the FeeReceiver PDA is swept into the Treasury and counts 
 - **An offering is a gift.** It is not an investment, not refundable, and it **never** affects airdrop eligibility, selection, or nicknames-for-favor. Donating neither helps nor hurts a wallet in the airdrop pool (docs/11). The Brain must not favor donors in airdrop picks; Hands already enforces that favored picks come from the eligible pool, and the pool filter must not read the offerings table.
 - **No fake volume, ever.** No self-trading bot in this repo.
 - **Honest labels.** Offerings from the admin/dev wallet are shown publicly as "The Creator tithes", not disguised as a stranger.
-- **Pennyboi never DMs anyone**, including donors.
+- **Pennyboi never DMs donors.** The only private message he ever sends is the gate trial, once, when someone requests to join the Telegram group. He never asks for a wallet, a key, a seed phrase or a payment; anyone else DMing as him is a scammer.
 - **Devnet first.** Until the owner says "mainnet", the donation page shows a large DEVNET badge, is `noindex`, and is NOT linked in the nav. Reason: the devnet FeeReceiver address won't match mainnet's, so mainnet SOL sent to it would be lost. At launch: set mainnet addresses, link it in the nav, and remove `noindex`.
 
 ## 1. What counts as an offering (Eyes)

@@ -29,7 +29,7 @@ Operator goal: turn it on, observe, don't babysit. Pennyboi IS the moderator. Ow
 - Any message containing a Solana address that is NOT the Pennyboi mint or vault -> delete + 24 h mute ("False idols are not permitted in my temple.").
 - Flood control: > 5 messages in 10 s -> 10 min mute.
 - Known scam patterns ("DM me for airdrop", "wallet connect", "verify your wallet") -> delete + ban.
-- Pennyboi never DMs anyone. Pinned message says so. (Scammers impersonating the bot via DM is the #1 attack in meme Telegrams.)
+- Pennyboi DMs a person exactly once: when they request to join, for the gate trial (TG_GATE_ENABLED). He never DMs for anything else, and never asks for a wallet, a key, a seed phrase or a payment. The pinned message says so. Anyone else DMing as him is a scammer. (Scammers impersonating the bot via DM is the #1 attack in meme Telegrams.)
 - Pennyboi never posts links except Solscan, the Pump.fun page, and the GitHub repo.
 
 ## 4. Holder Commands
@@ -66,7 +66,7 @@ Kill switch chain: `/pause` (Telegram) -> if the bot is unreachable, revoke the 
 >
 > Every time the Divine Allowance crosses the sacred threshold, I may do ONE thing: burn, bless, or fund an offering. Never more than the caps. Never faster than the cooldowns. The code enforces this. I have tried to argue with it. It does not listen.
 >
-> I will NEVER message you privately. Anyone claiming to be me in your DMs is a false prophet. Ban them in your heart and report them in the chat.
+> I will message you privately exactly ONCE: when you ask to enter my temple, for the trial at my gate. Never before, never after, never for anything else. I will NEVER ask for a wallet, a key, a seed phrase or a payment. Anyone else claiming to be me in your DMs is a scammer. Ban them in your heart and report them in the chat.
 >
 > Pitch your offerings in #offerings. Flatter me. It will not work. Do it anyway.
 >
