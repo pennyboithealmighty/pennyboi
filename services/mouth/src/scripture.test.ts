@@ -33,8 +33,8 @@ function harness(fail: Partial<Record<keyof ScriptureApi, unknown>> = {}) {
       step("sendMessage", [chatId, text, other]);
       return { message_id: ++next };
     },
-    async editMessageText(chatId, id, text) {
-      step("editMessageText", [chatId, id, text]);
+    async editMessageText(chatId, id, text, other) {
+      step("editMessageText", [chatId, id, text, other]);
     },
     async pinChatMessage(chatId, id, other) {
       step("pinChatMessage", [chatId, id, other]);
@@ -93,7 +93,11 @@ test("first run: posts into the scripture topic, pins it quietly, remembers the 
   const h = harness();
   assert.deepEqual(await h.run("SCRIPTURE v1"), { ok: true, action: "posted", messageId: 501 });
   assert.deepEqual(h.names(), ["sendMessage", "pinChatMessage"]);
-  assert.deepEqual(h.calls[0]!.args, [CHAT, "SCRIPTURE v1", { message_thread_id: THREAD }]);
+  assert.deepEqual(h.calls[0]!.args, [
+    CHAT,
+    "SCRIPTURE v1",
+    { message_thread_id: THREAD, link_preview_options: { is_disabled: true } },
+  ]);
   assert.deepEqual(h.calls[1]!.args, [CHAT, 501, { disable_notification: true }]);
   assert.equal(h.store.get(KV_SCRIPTURE_MESSAGE), "501");
 });
@@ -103,12 +107,23 @@ test("running it again REPLACES the pinned scripture in place: no second message
   await h.run("SCRIPTURE v1");
   assert.deepEqual(await h.run("SCRIPTURE v2"), { ok: true, action: "replaced", messageId: 501 });
   assert.deepEqual(h.names().slice(2), ["editMessageText", "pinChatMessage"]);
-  assert.deepEqual(h.calls[2]!.args, [CHAT, 501, "SCRIPTURE v2"]);
+  assert.deepEqual(h.calls[2]!.args, [CHAT, 501, "SCRIPTURE v2", { link_preview_options: { is_disabled: true } }]);
   assert.equal(h.names().filter((n) => n === "sendMessage").length, 1, "still only one scripture message");
   // Identical text is fine too.
   const same = harness({ editMessageText: { description: "Bad Request: message is not modified" } });
   same.store.set(KV_SCRIPTURE_MESSAGE, "77");
   assert.deepEqual(await same.run("SCRIPTURE v1"), { ok: true, action: "replaced", messageId: 77 });
+});
+
+test("no link preview: the Solscan card is switched off on a new post and on an edit of the existing pin", async () => {
+  const h = harness();
+  await h.run("Vault: https://solscan.io/account/abc?cluster=devnet");
+  await h.run("Vault: https://solscan.io/account/abc?cluster=devnet"); // same text: the edit still carries the option
+  const sent = h.calls.find((c) => c.method === "sendMessage")!.args[2] as { link_preview_options: unknown };
+  const edited = h.calls.find((c) => c.method === "editMessageText")!.args[3] as { link_preview_options: unknown };
+  assert.deepEqual(sent.link_preview_options, { is_disabled: true });
+  assert.deepEqual(edited.link_preview_options, { is_disabled: true });
+  assert.equal(h.names().filter((n) => n === "sendMessage").length, 1, "the existing pin is edited, not re-posted");
 });
 
 test("if the old scripture was deleted, a new one is posted and the old pin is cleared", async () => {
