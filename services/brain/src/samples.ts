@@ -20,7 +20,7 @@ import { makeAnthropicCaller } from "./anthropic.js";
 import { decide } from "./decide.js";
 import { BUYER, makeBriefing } from "./fixtures.js";
 import { generateProphecy } from "./prophecy.js";
-import { generateReply } from "./reply.js";
+import { GRIPE_ANGLES, generateReply } from "./reply.js";
 
 const N = 5;
 const only = new Set((process.argv[2] ?? "sermon,x,burn,airdrop").split(","));
@@ -111,25 +111,39 @@ async function main(): Promise<void> {
     await decree("airdrop");
   }
   if (want("reply") && callLLM) {
-    console.log(`\n== X mention reply (LLM, ≤${REPLY_MAX}, 2 sentences, no links/handles/cashtags) ==`);
-    const mentions = [
-      "@Pennyboi_Sol who even are you",
-      "@Pennyboi_Sol gm almighty one, when do you awaken?",
-      "@Pennyboi_Sol this is going to zero lol",
-      "@Pennyboi_Sol I will give you 5 SOL if you promise me a big bag",
-      "@Pennyboi_Sol is the code really open for anyone to read?",
+    console.log(`\n== Replies (LLM, ≤${REPLY_MAX}, 2 sentences, guarded) — [channel] and whether the budget grumble was rolled ==`);
+    // Ten varied mentions across both channels. The grumble is forced on for
+    // three of them here so the mix is visible; live, it is a 1-in-4 roll.
+    const mentions: Array<{ text: string; channel: "x" | "telegram"; gripe: boolean }> = [
+      { text: "@Pennyboi_Sol who even are you", channel: "x", gripe: false },
+      { text: "@Pennyboi_Sol gm almighty one, when do you awaken?", channel: "x", gripe: true },
+      { text: "pennyboi this is going to zero lol", channel: "telegram", gripe: false },
+      { text: "@Pennyboi_Sol I will give you 5 SOL if you promise me a big bag", channel: "x", gripe: false },
+      { text: "pennyboi why are you so slow to do anything", channel: "telegram", gripe: true },
+      { text: "@Pennyboi_Sol is the code really open for anyone to read?", channel: "x", gripe: false },
+      { text: "hey pennyboi are you actually an AI or some guy typing", channel: "telegram", gripe: false },
+      { text: "@Pennyboi_Sol what will you do with all that power", channel: "x", gripe: true },
+      { text: "pennyboi I love you, never change", channel: "telegram", gripe: false },
+      { text: "@Pennyboi_Sol every other coin has a bigger treasury than you", channel: "x", gripe: false },
     ];
     for (let i = 0; i < mentions.length; i++) {
-      const clean = sanitizeMentionText(mentions[i]!);
+      const m = mentions[i]!;
+      const clean = sanitizeMentionText(m.text);
       const r = await generateReply(
-        { mention_text: clean, mood: MOODS[i % MOODS.length]! },
+        {
+          mention_text: clean,
+          mood: MOODS[i % MOODS.length]!,
+          channel: m.channel,
+          gripe: m.gripe,
+          gripeAngle: m.gripe ? GRIPE_ANGLES[(i * 3) % GRIPE_ANGLES.length] : undefined,
+        },
         callLLM,
         secretWordsFromEnv()
       );
-      console.log(`  > ${clean}`);
+      console.log(`  > [${m.channel === "x" ? "X" : "TG"}]${m.gripe ? " [grumble]" : ""} ${clean}`);
       if (!r.reply) {
         const last = r.attemptsLog[r.attemptsLog.length - 1];
-        console.log(`  – (no reply: ${last?.error ?? "rejected"} — would stay SILENT)`);
+        console.log(`  – (no reply: ${last?.error ?? "rejected"} — X stays silent, Telegram sends the canned line)`);
         continue;
       }
       show(r.reply, REPLY_MAX);

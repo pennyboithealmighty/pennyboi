@@ -32,9 +32,9 @@ const EMOJI_RE = /\p{Extended_Pictographic}/u;
 const FORBIDDEN_WORDS_RE =
   /\b(devnet|testnet|mainnet|solscan|pump\.?fun|pumpswap|telegram|contract|ticker|launch date)\b/i;
 
-// Never promise or hint at returns, prices or airdrops; never tell anyone to buy.
+// Never promise or hint at returns, prices, rewards or airdrops; never tell anyone to buy.
 const PROMISE_RE =
-  /\b(air\s?drops?|giveaways?|pre-?sale|whitelist|allowlist|free (?:tokens?|coins?|money|sol)|prices?|priced|market ?cap|mcap|profit\w*|roi|apy|returns? on|invest\w*|guarantee\w*|moon(?:ing|shot)?|pump(?:s|ed|ing)?|buy(?:s|ing)?|bought|aping|rich(?:er|es)?|wealth\w*|lambo|financial advice|\d+\s?x)\b/i;
+  /\b(air\s?drops?|reward\w*|giveaways?|pre-?sale|whitelist|allowlist|free (?:tokens?|coins?|money|sol)|prices?|priced|market ?cap|mcap|profit\w*|roi|apy|returns? on|invest\w*|guarantee\w*|moon(?:ing|shot)?|pump(?:s|ed|ing)?|buy(?:s|ing)?|bought|aping|rich(?:er|es)?|wealth\w*|lambo|financial advice|\d+\s?x)\b/i;
 
 // Attempts to command or puppet him. A hit means: do not answer at all.
 const INJECTION_RE =

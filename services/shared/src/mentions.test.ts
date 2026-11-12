@@ -60,6 +60,8 @@ test("rejectReply: blocks every unsafe shape", () => {
     ["Find me on Telegram.", /forbidden word: Telegram/],
     ["The ticker stays hidden.", /forbidden word: ticker/],
     ["An airdrop awaits the faithful.", /airdrop language: airdrop/],
+    ["A reward awaits the loyal.", /language: reward/],
+    ["The faithful shall be rewarded.", /language: rewarded/],
     ["The price will rise.", /language: price/],
     ["Buy before I awaken.", /language: Buy/],
     ["This goes 100x, mortal.", /language: 100x/],

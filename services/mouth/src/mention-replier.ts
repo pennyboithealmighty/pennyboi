@@ -37,8 +37,11 @@ export type Generated =
   | { kind: "unavailable"; reason: string };
 export type GenerateReply = (mentionText: string) => Promise<Generated>;
 
-/** Ask Brain /reply for an in-character answer to an already sanitized mention. */
-export function brainReplyGenerator(): GenerateReply {
+/**
+ * Ask Brain /reply for an in-character answer to an already sanitized mention.
+ * `channel` tells the Brain where the mortal spoke, so the prompt fits.
+ */
+export function brainReplyGenerator(channel: "x" | "telegram" = "x"): GenerateReply {
   return async (mentionText) => {
     const url = `${new URL(envStr("BRAIN_URL", "http://127.0.0.1:8788/decide")).origin}/reply`;
     let res: Response;
@@ -46,7 +49,7 @@ export function brainReplyGenerator(): GenerateReply {
       res = await fetch(url, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ mention_text: mentionText, mood: pickMood() }),
+        body: JSON.stringify({ mention_text: mentionText, mood: pickMood(), channel }),
       });
     } catch (e) {
       return { kind: "unavailable", reason: `Brain unreachable: ${(e as Error).message}` };

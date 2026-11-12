@@ -134,7 +134,7 @@ let shared: TgReplier | null = null;
 export function tgReplier(m: { db: Kv; log: Logger }, canned: string): TgReplier {
   if (!shared) {
     const cfg = loadTgReplyConfig();
-    shared = new TgReplier({ kv: m.db, log: m.log, cfg, generate: brainReplyGenerator(), canned });
+    shared = new TgReplier({ kv: m.db, log: m.log, cfg, generate: brainReplyGenerator("telegram"), canned });
     m.log.info(
       cfg.enabled
         ? `tg replies: ON — Brain-written | 1 per user per ${cfg.userCooldownSecs}s, ${cfg.maxPerDay}/day`

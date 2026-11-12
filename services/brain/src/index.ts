@@ -8,7 +8,7 @@ import { envNum, envStr, type Briefing } from "@pennyboi/shared";
 import { anthropicSettings, makeAnthropicCaller } from "./anthropic.js";
 import { decide, type CallLLM } from "./decide.js";
 import { generateProphecy, type ProphecyInput } from "./prophecy.js";
-import { generateReply } from "./reply.js";
+import { DEFAULT_GRIPE_RATE, generateReply, pickGripeAngle, rollGripe } from "./reply.js";
 import { generateThank } from "./thank.js";
 import { generateWelcome } from "./welcome.js";
 import { fallbackThanks, secretWordsFromEnv, type ThankInput } from "@pennyboi/shared";
@@ -137,11 +137,12 @@ function main(): void {
     res.json({ ok: true, thanks: result.thanks, fellBack: result.fellBack });
   });
 
-  // X mention replies. Mouth screens and sanitizes the mention; Brain returns
-  // { reply } or null. No fallback: when both attempts are rejected, Mouth
-  // stays silent.
+  // Replies for X mentions and the Telegram group. Mouth screens and sanitizes
+  // the message and says which channel it came from; Brain returns { reply } or
+  // null. No fallback here: on null, X stays silent and Telegram uses its
+  // canned line.
   app.post("/reply", async (req: Request, res: Response) => {
-    const body = req.body as { mention_text?: unknown; mood?: unknown };
+    const body = req.body as { mention_text?: unknown; mood?: unknown; channel?: unknown };
     if (typeof body?.mention_text !== "string" || body.mention_text.trim() === "") {
       return res.status(400).json({ ok: false, error: "missing mention_text" });
     }
@@ -151,12 +152,23 @@ function main(): void {
     } catch (e) {
       return res.status(503).json({ ok: false, error: (e as Error).message });
     }
+    const channel = body.channel === "telegram" ? "telegram" : "x";
+    // About one reply in four grumbles about his divine budget (REPLY_GRIPE_RATE).
+    const gripe = rollGripe(envNum("REPLY_GRIPE_RATE", DEFAULT_GRIPE_RATE));
     const result = await generateReply(
-      { mention_text: body.mention_text, mood: typeof body.mood === "string" ? body.mood : undefined },
+      {
+        mention_text: body.mention_text,
+        mood: typeof body.mood === "string" ? body.mood : undefined,
+        channel,
+        gripe,
+        gripeAngle: gripe ? pickGripeAngle() : undefined,
+      },
       callLLM,
       secretWordsFromEnv()
     );
-    log.info(`reply: ${result.reply ? "generated" : "SKIPPED"} (attempts=${result.attempts})`);
+    log.info(
+      `reply: ${result.reply ? "generated" : "SKIPPED"} (attempts=${result.attempts}, channel=${channel}, gripe=${gripe})`
+    );
     for (const a of result.attemptsLog) {
       if (a.ok) continue;
       log.warn(`reply attempt ${a.attempt} rejected: ${a.error}`);
