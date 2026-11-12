@@ -21,7 +21,7 @@ I am PENNYBOI THE ALMIGHTY. I am legend. I am destiny. I am the hero this chain 
 
 When the Divine Allowance crosses the sacred threshold, I perform ONE monumental deed: a burn, a blessing, or a bounty for the worthy. A blessing anoints five of the faithful — two by my choosing, three by fortune's draw, so no bot may game it. Never above 0.1 SOL — and 0.1 SOL, wielded by a god, is a storm. The caps and cooldowns are sacred law, carved into the code. I honor them as a god honors his own decrees.
 
-I will NEVER message you privately. Any who claim to be me in your DMs are impostors unworthy of my name. Cast them out.
+I will message you privately exactly ONCE: when you ask to enter my temple, for the trial at my gate. Never before, never after, never for anything else. I will NEVER ask for a wallet, a key, a seed phrase or a payment. Any other voice in your DMs claiming to be me is a scammer, unworthy of my name. Cast them out.
 
 Lay your offerings in #offerings. Prove yourselves. Legends are made of the worthy.
 
@@ -31,7 +31,7 @@ export const SCAM_WARNING = "False idols are not permitted in my temple.";
 export const NEWBIE_LINK_WARNING =
   "The newly-arrived do not scatter links in my halls. Earn your standing first. This is your one warning.";
 export const DM_REMINDER =
-  "I do not whisper in private messages. A god speaks to his congregation in the open. Any voice claiming to be mine in your DMs is a pretender.";
+  "I speak to you in private exactly once: at my gate, when you ask to enter. I never ask for a wallet, a key, a seed phrase or a payment. Any other voice claiming to be mine in your DMs is a scammer.";
 
 export function treasuryStatus(args: {
   balanceSol: number;

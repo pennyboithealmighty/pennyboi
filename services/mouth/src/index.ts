@@ -18,6 +18,7 @@ import { createNarrateServer } from "./narrate-server.js";
 import { OfferingThanker } from "./offering-thanker.js";
 import { ProphecyScheduler } from "./prophecy-scheduler.js";
 import { ReplyRateLimiter } from "./ratelimit.js";
+import { registerScripture } from "./scripture.js";
 import { registerUniqueWelcome } from "./tg-welcome.js";
 import { registerWelcomeClip } from "./welcome-clip.js";
 import { XMentionsClient } from "./x-mentions-client.js";
@@ -55,6 +56,7 @@ async function main(): Promise<void> {
 
   bot.catch((err) => log.error("bot error", err.error));
   registerCommands(m);
+  registerScripture(m); // owner-only /scripture_post; never posts by itself
   registerGate(m); // join-request trials when TG_GATE_ENABLED; independent of the welcomes below
   registerWelcomeClip(m); // before the two below: takes the join event when TG_WELCOME_CLIP_ENABLED
   registerUniqueWelcome(m); // before moderation: takes the join event when TG_UNIQUE_WELCOME_ENABLED
