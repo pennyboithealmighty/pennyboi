@@ -54,6 +54,30 @@ export interface XMentionRow {
   decided_ts: number | null;
 }
 
+export type GateStatus = "queued" | "pending" | "approving" | "declining" | "approved" | "declined";
+
+/** A join-request trial at the Gate (one row per user). */
+export interface GateTrialRow {
+  user_id: number;
+  user_chat_id: number;
+  chat_id: number;
+  name: string | null;
+  requested_ts: number;
+  deadline_ts: number;
+  status: GateStatus;
+  reason: string | null;
+  needed: number;
+  correct: number;
+  wrong: number;
+  answer: number | null;
+  grid: string | null;
+  token: string | null;
+  message_id: number | null;
+  cooldown_until: number;
+  decided_ts: number | null;
+  attempts: number;
+}
+
 export interface ExclusionRow {
   address: string;
   reason: string | null;
@@ -550,6 +574,38 @@ export class MemoryDb {
 
   recentXMentions(n: number): XMentionRow[] {
     return this.db.prepare(`SELECT * FROM x_mentions ORDER BY id DESC LIMIT ?`).all(n) as XMentionRow[];
+  }
+
+  // ---- The Gate of the Almighty ----------------------------------------------
+
+  getGateTrial(userId: number): GateTrialRow | null {
+    const r = this.db.prepare(`SELECT * FROM gate_trials WHERE user_id = ?`).get(userId) as GateTrialRow | undefined;
+    return r ?? null;
+  }
+
+  /** Write the whole trial row (insert or replace). */
+  saveGateTrial(t: GateTrialRow): void {
+    this.db
+      .prepare(
+        `INSERT OR REPLACE INTO gate_trials
+           (user_id, user_chat_id, chat_id, name, requested_ts, deadline_ts, status, reason, needed, correct,
+            wrong, answer, grid, token, message_id, cooldown_until, decided_ts, attempts)
+         VALUES (@user_id, @user_chat_id, @chat_id, @name, @requested_ts, @deadline_ts, @status, @reason, @needed,
+                 @correct, @wrong, @answer, @grid, @token, @message_id, @cooldown_until, @decided_ts, @attempts)`
+      )
+      .run(t);
+  }
+
+  /** Trials that still need something done: not yet approved or declined. */
+  openGateTrials(): GateTrialRow[] {
+    return this.db
+      .prepare(`SELECT * FROM gate_trials WHERE status NOT IN ('approved', 'declined') ORDER BY requested_ts ASC`)
+      .all() as GateTrialRow[];
+  }
+
+  gateTrialByToken(token: string): GateTrialRow | null {
+    const r = this.db.prepare(`SELECT * FROM gate_trials WHERE token = ?`).get(token) as GateTrialRow | undefined;
+    return r ?? null;
   }
 
   // ---- airdrop eligibility & rounds (docs/11) -----------------------------

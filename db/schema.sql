@@ -169,3 +169,31 @@ CREATE TABLE IF NOT EXISTS x_mentions (
 );
 CREATE INDEX IF NOT EXISTS x_mentions_status ON x_mentions (status, id);
 CREATE INDEX IF NOT EXISTS x_mentions_author ON x_mentions (author_id, decided_ts);
+
+-- ---- The Gate of the Almighty (TG_GATE_ENABLED) ---------------------------
+-- One row per user who has asked to join: the trial in progress, or the last
+-- verdict and any cooldown. Everything a trial needs is here, so a restart can
+-- finish an approval or a decline and re-arm a running trial; it never
+-- approves someone who has not passed.
+CREATE TABLE IF NOT EXISTS gate_trials (
+  user_id        INTEGER PRIMARY KEY,
+  user_chat_id   INTEGER NOT NULL,   -- private chat id from the join request
+  chat_id        INTEGER NOT NULL,   -- the group they asked to join
+  name           TEXT,               -- sanitized display name, for the log only
+  requested_ts   INTEGER NOT NULL,   -- when the join request was made
+  deadline_ts    INTEGER NOT NULL,   -- answer by this time
+  status         TEXT NOT NULL,      -- queued | pending | approving | declining | approved | declined
+  reason         TEXT,               -- correct | wrong | timeout | cooldown | busy | stale_request | dm_failed ...
+  needed         INTEGER NOT NULL,   -- correct rounds required (1, or 2 with no photo and no username)
+  correct        INTEGER NOT NULL DEFAULT 0,
+  wrong          INTEGER NOT NULL DEFAULT 0,
+  answer         INTEGER,            -- 1..4 for the grid now shown
+  grid           TEXT,               -- image file now shown
+  token          TEXT,               -- ties button presses to the grid now shown
+  message_id     INTEGER,
+  cooldown_until INTEGER NOT NULL DEFAULT 0,
+  decided_ts     INTEGER,
+  attempts       INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS gate_trials_status ON gate_trials (status);
+CREATE INDEX IF NOT EXISTS gate_trials_token ON gate_trials (token);

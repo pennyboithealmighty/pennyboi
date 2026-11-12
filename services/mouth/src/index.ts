@@ -10,6 +10,7 @@ import { registerCommands } from "./commands.js";
 import { loadMouthConfig } from "./config.js";
 import { startDailySchedule } from "./daily.js";
 import type { MouthCtx } from "./deps.js";
+import { registerGate } from "./gate.js";
 import { log } from "./log.js";
 import { MentionReplier, brainReplyGenerator } from "./mention-replier.js";
 import { registerModeration } from "./moderation.js";
@@ -54,6 +55,7 @@ async function main(): Promise<void> {
 
   bot.catch((err) => log.error("bot error", err.error));
   registerCommands(m);
+  registerGate(m); // join-request trials when TG_GATE_ENABLED; independent of the welcomes below
   registerWelcomeClip(m); // before the two below: takes the join event when TG_WELCOME_CLIP_ENABLED
   registerUniqueWelcome(m); // before moderation: takes the join event when TG_UNIQUE_WELCOME_ENABLED
   registerModeration(m);
@@ -76,8 +78,10 @@ async function main(): Promise<void> {
   startDailySchedule(m);
 
   // Long-poll Telegram. message_reaction must be in allowed_updates to arrive.
+  // chat_join_request and callback_query feed the gate (TG_GATE_ENABLED); with
+  // the gate off nothing handles them.
   await bot.start({
-    allowed_updates: ["message", "message_reaction", "chat_member"],
+    allowed_updates: ["message", "message_reaction", "chat_member", "chat_join_request", "callback_query"],
     onStart: (info) => log.info(`bot @${info.username} started`),
   });
 }
