@@ -6,6 +6,7 @@ import { sendSafe } from "./announce.js";
 import type { MouthCtx } from "./deps.js";
 import { foreignAddress, hasAnyUrl, isScam } from "./detect.js";
 import * as P from "./personality.js";
+import { tgReplier } from "./tg-replies.js";
 
 const MUTE_ALL = {
   can_send_messages: false,
@@ -67,6 +68,7 @@ function isForwarded(c: Context): boolean {
 
 export function registerModeration(m: MouthCtx): void {
   const { bot } = m;
+  tgReplier(m, P.REACTIONS.mention); // built at boot so the log shows whether Brain replies are on
 
   // Welcome new members (docs/06 §2F). No DM, no link spam.
   bot.on("message:new_chat_members", async (c) => {
@@ -164,7 +166,25 @@ async function maybeReact(m: MouthCtx, c: Context, text: string): Promise<void> 
   }
   if (!line) return;
 
+  // TG_MENTION_REPLY_ENABLED: the plain mention line is written by the Brain
+  // instead. Its own limits are checked first (over a limit he stays silent);
+  // the bribe / sell / treasury reactions above are untouched.
+  const replier = tgReplier(m, P.REACTIONS.mention);
+  const brainReply = replier.enabled && line === P.REACTIONS.mention && c.from !== undefined;
+  if (brainReply) {
+    const gate = replier.mayReply(c.from!.id);
+    if (!gate.ok) {
+      m.log.info(`tg reply: skipped [${gate.reason}] (user ${c.from!.id})`);
+      return;
+    }
+  }
+
   const topicId = c.message?.message_thread_id ?? 0;
   if (!m.rate.allow(topicId)) return; // rate-limit per topic
+  if (brainReply) {
+    await c.replyWithChatAction("typing", { message_thread_id: c.message?.message_thread_id }).catch(() => {});
+    line = (await replier.compose(text)).text;
+    replier.record(c.from!.id);
+  }
   await c.reply(line, { message_thread_id: c.message?.message_thread_id }).catch(() => {});
 }
