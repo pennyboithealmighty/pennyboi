@@ -25,6 +25,7 @@ import { LIMITS, shapeDry } from "@pennyboi/shared";
 import { sendSafe } from "./announce.js";
 import type { MouthCtx } from "./deps.js";
 import { solscanTx } from "./links.js";
+import { sendOfferingClip } from "./offering-clip.js";
 import { shapeForPublic } from "./public-post.js";
 
 const TIER_RANK: Record<DonationTier, number> = { dust: 0, offering: 1, grand: 2 };
@@ -139,7 +140,12 @@ export class OfferingThanker {
       // Clamp + throttle the thanks line (≤200); the per-donor link lines don't count.
       const shaped = shapeForPublic(this.m.db, thanks.telegram, LIMITS.telegramThanks);
       const message = composeOfferingThanks(shaped, namedViews);
-      await sendSafe(this.m, message, { threadId: offeringsThreadId(this.m) });
+      // TG_OFFERING_CLIP_ENABLED: one clip for the whole batch, the thank-you as
+      // its caption. If that is off or fails, the text goes out exactly as before.
+      const threadId = offeringsThreadId(this.m);
+      if (!(await sendOfferingClip(this.m, message, threadId))) {
+        await sendSafe(this.m, message, { threadId });
+      }
 
       // Write the final narration back so /public/offering/receipt returns it.
       for (const r of rows) {
