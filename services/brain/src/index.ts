@@ -8,8 +8,9 @@ import { envNum, envStr, type Briefing } from "@pennyboi/shared";
 import { anthropicSettings, makeAnthropicCaller } from "./anthropic.js";
 import { decide, type CallLLM } from "./decide.js";
 import { generateProphecy, type ProphecyInput } from "./prophecy.js";
+import { generateReply } from "./reply.js";
 import { generateThank } from "./thank.js";
-import { fallbackThanks, type ThankInput } from "@pennyboi/shared";
+import { fallbackThanks, secretWordsFromEnv, type ThankInput } from "@pennyboi/shared";
 import { log } from "./log.js";
 
 function getCaller(): CallLLM {
@@ -135,8 +136,41 @@ function main(): void {
     res.json({ ok: true, thanks: result.thanks, fellBack: result.fellBack });
   });
 
+  // X mention replies. Mouth screens and sanitizes the mention; Brain returns
+  // { reply } or null. No fallback: when both attempts are rejected, Mouth
+  // stays silent.
+  app.post("/reply", async (req: Request, res: Response) => {
+    const body = req.body as { mention_text?: unknown; mood?: unknown };
+    if (typeof body?.mention_text !== "string" || body.mention_text.trim() === "") {
+      return res.status(400).json({ ok: false, error: "missing mention_text" });
+    }
+    let callLLM: CallLLM;
+    try {
+      callLLM = getCaller();
+    } catch (e) {
+      return res.status(503).json({ ok: false, error: (e as Error).message });
+    }
+    const result = await generateReply(
+      { mention_text: body.mention_text, mood: typeof body.mood === "string" ? body.mood : undefined },
+      callLLM,
+      secretWordsFromEnv()
+    );
+    log.info(`reply: ${result.reply ? "generated" : "SKIPPED"} (attempts=${result.attempts})`);
+    for (const a of result.attemptsLog) {
+      if (a.ok) continue;
+      log.warn(`reply attempt ${a.attempt} rejected: ${a.error}`);
+    }
+    const last = result.attemptsLog[result.attemptsLog.length - 1];
+    res.json({
+      ok: true,
+      reply: result.reply,
+      attempts: result.attempts,
+      reason: result.reply ? undefined : last?.error,
+    });
+  });
+
   app.listen(port, () => {
-    log.info(`brain listening on :${port} (POST /decide, /prophecy, /thank, GET /health), model=${settings.model}`);
+    log.info(`brain listening on :${port} (POST /decide, /prophecy, /thank, /reply, GET /health), model=${settings.model}`);
     if (!envStr("ANTHROPIC_API_KEY")) {
       log.warn("ANTHROPIC_API_KEY not set — /decide will return 503 until configured.");
     }

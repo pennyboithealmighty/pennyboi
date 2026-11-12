@@ -13,3 +13,4 @@ export * from "./airdrop.js";
 export * from "./donations.js";
 export * from "./burn-quote.js";
 export * from "./voice.js";
+export * from "./mentions.js";

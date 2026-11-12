@@ -148,3 +148,24 @@ CREATE TABLE IF NOT EXISTS x_posts (
   status           TEXT NOT NULL,   -- posted | rejected | skipped | error
   rejection_reason TEXT
 );
+
+-- ---- X mention replies ----------------------------------------------------
+-- One row per mention ever read. mention_id is UNIQUE, so a mention can never
+-- be queued or answered twice, even if the saved since_id were lost. Kept apart
+-- from x_posts so replies never touch the once-a-day post accounting.
+CREATE TABLE IF NOT EXISTS x_mentions (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  mention_id      TEXT NOT NULL UNIQUE,
+  ts              INTEGER NOT NULL,   -- when we read it
+  created_ts      INTEGER,            -- when it was posted
+  author_id       TEXT NOT NULL,
+  author_username TEXT,
+  text            TEXT NOT NULL,      -- the mention as posted (untrusted)
+  status          TEXT NOT NULL,      -- pending | replied | dry_run | skipped | error
+  reason          TEXT,               -- why skipped / errored
+  reply_text      TEXT,
+  reply_id        TEXT,
+  decided_ts      INTEGER
+);
+CREATE INDEX IF NOT EXISTS x_mentions_status ON x_mentions (status, id);
+CREATE INDEX IF NOT EXISTS x_mentions_author ON x_mentions (author_id, decided_ts);

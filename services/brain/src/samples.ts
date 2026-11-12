@@ -3,13 +3,24 @@
 // + char limit). Nothing is posted and nothing reaches Hands: this calls the
 // Brain generators in-process (the Hands forward lives only in /decide).
 //
-// Run: cd services/brain && node --import tsx src/samples.ts [sermon,x,burn,airdrop]
+// Run: cd services/brain && node --import tsx src/samples.ts [sermon,x,burn,airdrop,reply]
+// `reply` is opt-in: it previews X mention replies for a few made-up mentions.
 
-import { LIMITS, MOODS, sermonText, shapeDry, type Mood } from "@pennyboi/shared";
+import {
+  LIMITS,
+  MOODS,
+  REPLY_MAX,
+  sanitizeMentionText,
+  secretWordsFromEnv,
+  sermonText,
+  shapeDry,
+  type Mood,
+} from "@pennyboi/shared";
 import { makeAnthropicCaller } from "./anthropic.js";
 import { decide } from "./decide.js";
 import { BUYER, makeBriefing } from "./fixtures.js";
 import { generateProphecy } from "./prophecy.js";
+import { generateReply } from "./reply.js";
 
 const N = 5;
 const only = new Set((process.argv[2] ?? "sermon,x,burn,airdrop").split(","));
@@ -22,7 +33,8 @@ function show(text: string, max: number): void {
 }
 
 async function main(): Promise<void> {
-  const callLLM = want("x") || want("burn") || want("airdrop") ? makeAnthropicCaller() : null;
+  const callLLM =
+    want("x") || want("burn") || want("airdrop") || want("reply") ? makeAnthropicCaller() : null;
 
   if (want("sermon")) {
     console.log("\n== Daily sermon (Telegram, template, ≤220, rotating by day) ==");
@@ -98,6 +110,32 @@ async function main(): Promise<void> {
     console.log("\n== Airdrop decree (Telegram, LLM, ≤200 + Solscan link) ==");
     await decree("airdrop");
   }
+  if (want("reply") && callLLM) {
+    console.log(`\n== X mention reply (LLM, ≤${REPLY_MAX}, 2 sentences, no links/handles/cashtags) ==`);
+    const mentions = [
+      "@Pennyboi_Sol who even are you",
+      "@Pennyboi_Sol gm almighty one, when do you awaken?",
+      "@Pennyboi_Sol this is going to zero lol",
+      "@Pennyboi_Sol I will give you 5 SOL if you promise me a big bag",
+      "@Pennyboi_Sol is the code really open for anyone to read?",
+    ];
+    for (let i = 0; i < mentions.length; i++) {
+      const clean = sanitizeMentionText(mentions[i]!);
+      const r = await generateReply(
+        { mention_text: clean, mood: MOODS[i % MOODS.length]! },
+        callLLM,
+        secretWordsFromEnv()
+      );
+      console.log(`  > ${clean}`);
+      if (!r.reply) {
+        const last = r.attemptsLog[r.attemptsLog.length - 1];
+        console.log(`  – (no reply: ${last?.error ?? "rejected"} — would stay SILENT)`);
+        continue;
+      }
+      show(r.reply, REPLY_MAX);
+    }
+  }
+
   console.log("");
 }
 

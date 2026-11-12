@@ -1,7 +1,7 @@
 // Mouth configuration loaded from env (docs/07). Topic IDs may be empty until
 // the owner runs /ids and fills them in.
 
-import { envNum, envStr } from "@pennyboi/shared";
+import { envBool, envNum, envStr, secretWordsFromEnv } from "@pennyboi/shared";
 
 export interface MouthConfig {
   botToken: string;
@@ -36,9 +36,55 @@ export interface MouthConfig {
       launchDate: string; // ISO date or ""
     };
   };
+  mentions: MentionConfig;
 }
 
 export type XMode = "off" | "prelaunch" | "live";
+
+/** X mention replies. Off unless MENTION_REPLY_ENABLED; dry-run unless told otherwise. */
+export interface MentionConfig {
+  enabled: boolean;
+  dryRun: boolean;
+  maxPerDay: number;
+  maxPerUserPerDay: number;
+  spendCapUsd: number;
+  minGapSecs: number;
+  pollSecs: number;
+  staleSecs: number; // a queued mention older than this is dropped unanswered
+  pageMax: number; // most mentions read per poll
+  botUsername: string;
+  botUserId: string; // optional; looked up once and cached when empty
+  costReadUsd: number;
+  costReplyUsd: number;
+  costUserLookupUsd: number;
+  secretWords: string[];
+}
+
+/** Dry-run is the safe side: only an explicit false/0/no/off turns it off. */
+function dryRunFlag(): boolean {
+  return !/^(0|false|no|off)$/i.test(envStr("MENTION_REPLY_DRY_RUN", "true").trim());
+}
+
+export function loadMentionConfig(): MentionConfig {
+  return {
+    enabled: envBool("MENTION_REPLY_ENABLED", false),
+    dryRun: dryRunFlag(),
+    maxPerDay: envNum("MAX_REPLIES_PER_DAY", 20),
+    maxPerUserPerDay: envNum("MAX_REPLIES_PER_USER_PER_DAY", 2),
+    spendCapUsd: envNum("DAILY_X_SPEND_CAP_USD", 1.0),
+    minGapSecs: envNum("MENTION_REPLY_MIN_GAP_SECS", 180),
+    pollSecs: Math.max(60, envNum("MENTION_POLL_SECS", 300)),
+    staleSecs: envNum("MENTION_REPLY_STALE_SECS", 21_600),
+    pageMax: envNum("MENTION_POLL_MAX_RESULTS", 20),
+    botUsername: envStr("X_BOT_USERNAME", "Pennyboi_Sol").replace(/^@/, ""),
+    botUserId: envStr("X_BOT_USER_ID"),
+    // Defaults are the higher published rates, so the cap errs toward spending less.
+    costReadUsd: envNum("X_COST_PER_READ_USD", 0.005),
+    costReplyUsd: envNum("X_COST_PER_REPLY_USD", 0.015),
+    costUserLookupUsd: envNum("X_COST_PER_USER_LOOKUP_USD", 0.01),
+    secretWords: secretWordsFromEnv(),
+  };
+}
 
 // X_MODE replaces X_ENABLED; treat X_ENABLED=true as "live" for back-compat.
 function xMode(): XMode {
@@ -118,5 +164,6 @@ export function loadMouthConfig(): MouthConfig {
         launchDate: envStr("X_LAUNCH_DATE"),
       },
     },
+    mentions: loadMentionConfig(),
   };
 }

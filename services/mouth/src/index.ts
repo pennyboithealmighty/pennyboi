@@ -11,11 +11,13 @@ import { loadMouthConfig } from "./config.js";
 import { startDailySchedule } from "./daily.js";
 import type { MouthCtx } from "./deps.js";
 import { log } from "./log.js";
+import { MentionReplier, brainReplyGenerator } from "./mention-replier.js";
 import { registerModeration } from "./moderation.js";
 import { createNarrateServer } from "./narrate-server.js";
 import { OfferingThanker } from "./offering-thanker.js";
 import { ProphecyScheduler } from "./prophecy-scheduler.js";
 import { ReplyRateLimiter } from "./ratelimit.js";
+import { XMentionsClient } from "./x-mentions-client.js";
 import { XPoster } from "./xposter.js";
 
 async function main(): Promise<void> {
@@ -53,6 +55,14 @@ async function main(): Promise<void> {
   registerModeration(m);
   m.prophecy.start(); // no-op when X_MODE=off
   new OfferingThanker(m).start(); // thank SOL offerings (docs/12)
+  // X mention replies: no-op unless MENTION_REPLY_ENABLED; dry-run by default.
+  new MentionReplier({
+    db,
+    log,
+    cfg: cfg.mentions,
+    client: new XMentionsClient(cfg, log),
+    generate: brainReplyGenerator(),
+  }).start();
 
   // HTTP endpoint for Hands narration + health.
   createNarrateServer(m).listen(cfg.httpPort, () => {

@@ -39,6 +39,21 @@ export interface XPostRow {
   rejection_reason: string | null;
 }
 
+export interface XMentionRow {
+  id: number;
+  mention_id: string;
+  ts: number;
+  created_ts: number | null;
+  author_id: string;
+  author_username: string | null;
+  text: string;
+  status: string;
+  reason: string | null;
+  reply_text: string | null;
+  reply_id: string | null;
+  decided_ts: number | null;
+}
+
 export interface ExclusionRow {
   address: string;
   reason: string | null;
@@ -448,6 +463,93 @@ export class MemoryDb {
       .prepare(`SELECT ts, text, rejection_reason FROM x_posts WHERE status = 'rejected' ORDER BY id DESC LIMIT 1`)
       .get() as { ts: number; text: string; rejection_reason: string | null } | undefined;
     return r ?? null;
+  }
+
+  // ---- X mention replies ---------------------------------------------------
+
+  /** Record a mention once; false if this mention_id was already seen. */
+  insertXMention(r: {
+    now: number;
+    mentionId: string;
+    createdTs?: number | null;
+    authorId: string;
+    authorUsername?: string | null;
+    text: string;
+    status: "pending" | "skipped";
+    reason?: string;
+  }): boolean {
+    const info = this.db
+      .prepare(
+        `INSERT OR IGNORE INTO x_mentions
+           (mention_id, ts, created_ts, author_id, author_username, text, status, reason, decided_ts)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .run(
+        r.mentionId,
+        r.now,
+        r.createdTs ?? null,
+        r.authorId,
+        r.authorUsername ?? null,
+        r.text,
+        r.status,
+        r.reason ?? null,
+        r.status === "skipped" ? r.now : null
+      );
+    return info.changes > 0;
+  }
+
+  /** Oldest mention still waiting for a decision. */
+  nextPendingXMention(): XMentionRow | null {
+    const r = this.db
+      .prepare(`SELECT * FROM x_mentions WHERE status = 'pending' ORDER BY id ASC LIMIT 1`)
+      .get() as XMentionRow | undefined;
+    return r ?? null;
+  }
+
+  /** Settle a pending mention. A mention that is no longer pending is left alone. */
+  decideXMention(
+    mentionId: string,
+    d: {
+      now: number;
+      status: "replied" | "dry_run" | "skipped" | "error";
+      reason?: string;
+      replyText?: string;
+      replyId?: string;
+    }
+  ): void {
+    this.db
+      .prepare(
+        `UPDATE x_mentions SET status = ?, reason = ?, reply_text = ?, reply_id = ?, decided_ts = ?
+          WHERE mention_id = ? AND status = 'pending'`
+      )
+      .run(d.status, d.reason ?? null, d.replyText ?? null, d.replyId ?? null, d.now, mentionId);
+  }
+
+  /** Give up on mentions that have waited too long; returns how many. */
+  expirePendingXMentions(readBeforeTs: number, now: number): number {
+    return this.db
+      .prepare(
+        `UPDATE x_mentions SET status = 'skipped', reason = 'stale', decided_ts = ?
+          WHERE status = 'pending' AND ts < ?`
+      )
+      .run(now, readBeforeTs).changes;
+  }
+
+  /** Replies sent, or that dry-run would have sent, since `sinceTs` (optionally to one author). */
+  xMentionRepliesSince(sinceTs: number, authorId?: string): number {
+    const base = `SELECT COUNT(*) AS n FROM x_mentions WHERE status IN ('replied', 'dry_run') AND decided_ts >= ?`;
+    const row = authorId
+      ? this.db.prepare(`${base} AND author_id = ?`).get(sinceTs, authorId)
+      : this.db.prepare(base).get(sinceTs);
+    return (row as { n: number }).n;
+  }
+
+  pendingXMentionCount(): number {
+    return this.count(`SELECT COUNT(*) AS n FROM x_mentions WHERE status = 'pending'`);
+  }
+
+  recentXMentions(n: number): XMentionRow[] {
+    return this.db.prepare(`SELECT * FROM x_mentions ORDER BY id DESC LIMIT ?`).all(n) as XMentionRow[];
   }
 
   // ---- airdrop eligibility & rounds (docs/11) -----------------------------
