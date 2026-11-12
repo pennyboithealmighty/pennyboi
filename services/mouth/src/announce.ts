@@ -8,6 +8,7 @@
 // catchphrases are throttled; the Solscan link is appended after clamping.
 
 import { LIMITS, shapeDry } from "@pennyboi/shared";
+import { sendDecreeClip } from "./decree-clips.js";
 import type { MouthCtx } from "./deps.js";
 import { shapeForPublic } from "./public-post.js";
 import { stripDisallowedUrls } from "./sanitize.js";
@@ -52,9 +53,12 @@ export async function announce(ctx: MouthCtx, a: AnnounceInput): Promise<void> {
   // Shape once (clamp + catchphrase throttle, counter advanced once per decree);
   // X reuses the shaped text at its own limit. Links are not counted.
   const tg = shapeForPublic(ctx.db, a.narration.trim() || "...", LIMITS.telegramDecree);
-  await sendSafe(ctx, a.solscanUrl ? `${tg}\n\n${a.solscanUrl}` : tg, {
-    threadId: ctx.cfg.topics.general,
-  });
+  const text = a.solscanUrl ? `${tg}\n\n${a.solscanUrl}` : tg;
+  // TG_DECREE_CLIPS_ENABLED: the matching clip carries the narration as its
+  // caption. If that is off or fails, the text goes out exactly as before.
+  if (!(await sendDecreeClip(ctx, a.action, text))) {
+    await sendSafe(ctx, text, { threadId: ctx.cfg.topics.general });
+  }
 
   // Mirror to X only in live mode. In prelaunch/off, nothing on-chain/devnet
   // ever reaches X (docs/09 §1).
