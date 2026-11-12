@@ -10,6 +10,7 @@ import { decide, type CallLLM } from "./decide.js";
 import { generateProphecy, type ProphecyInput } from "./prophecy.js";
 import { generateReply } from "./reply.js";
 import { generateThank } from "./thank.js";
+import { generateWelcome } from "./welcome.js";
 import { fallbackThanks, secretWordsFromEnv, type ThankInput } from "@pennyboi/shared";
 import { log } from "./log.js";
 
@@ -169,8 +170,35 @@ function main(): void {
     });
   });
 
+  // Unique welcomes for new Telegram members. Mouth vets the names; Brain
+  // returns { welcome } or null, and on null Mouth sends the fixed template.
+  app.post("/welcome", async (req: Request, res: Response) => {
+    const body = req.body as { names?: unknown; count?: unknown; mood?: unknown };
+    const names = Array.isArray(body?.names) ? body.names.filter((n): n is string => typeof n === "string") : [];
+    const count = typeof body?.count === "number" && body.count > 0 ? body.count : Math.max(1, names.length);
+    let callLLM: CallLLM;
+    try {
+      callLLM = getCaller();
+    } catch (e) {
+      return res.status(503).json({ ok: false, error: (e as Error).message });
+    }
+    const result = await generateWelcome(
+      { names, count, mood: typeof body?.mood === "string" ? body.mood : undefined },
+      callLLM,
+      secretWordsFromEnv()
+    );
+    log.info(`welcome: ${result.welcome ? "generated" : "SKIPPED"} (attempts=${result.attempts})`);
+    for (const e of result.errors) log.warn(`welcome attempt rejected: ${e}`);
+    res.json({
+      ok: true,
+      welcome: result.welcome,
+      attempts: result.attempts,
+      reason: result.welcome ? undefined : result.errors[result.errors.length - 1],
+    });
+  });
+
   app.listen(port, () => {
-    log.info(`brain listening on :${port} (POST /decide, /prophecy, /thank, /reply, GET /health), model=${settings.model}`);
+    log.info(`brain listening on :${port} (POST /decide, /prophecy, /thank, /reply, /welcome, GET /health), model=${settings.model}`);
     if (!envStr("ANTHROPIC_API_KEY")) {
       log.warn("ANTHROPIC_API_KEY not set — /decide will return 503 until configured.");
     }

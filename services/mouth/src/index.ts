@@ -17,6 +17,7 @@ import { createNarrateServer } from "./narrate-server.js";
 import { OfferingThanker } from "./offering-thanker.js";
 import { ProphecyScheduler } from "./prophecy-scheduler.js";
 import { ReplyRateLimiter } from "./ratelimit.js";
+import { registerUniqueWelcome } from "./tg-welcome.js";
 import { XMentionsClient } from "./x-mentions-client.js";
 import { XPoster } from "./xposter.js";
 
@@ -52,6 +53,7 @@ async function main(): Promise<void> {
 
   bot.catch((err) => log.error("bot error", err.error));
   registerCommands(m);
+  registerUniqueWelcome(m); // before moderation: takes the join event when TG_UNIQUE_WELCOME_ENABLED
   registerModeration(m);
   m.prophecy.start(); // no-op when X_MODE=off
   new OfferingThanker(m).start(); // thank SOL offerings (docs/12)
